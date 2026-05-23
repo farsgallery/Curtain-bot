@@ -1,5 +1,7 @@
+import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from flask import Flask, request
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -9,6 +11,8 @@ MIN_HEIGHT = {"shid": 2.0, "zara": 1.5, "karkareh": 0}
 MIN_AREA = {"shid": 2.0, "zara": 1.5, "karkareh": 1.5}
 
 SELECTING_TYPE, ENTERING_WIDTH, ENTERING_HEIGHT = range(3)
+
+app = Flask(__name__)
 
 async def start(update: Update, context: CallbackContext):
     keyboard = [
@@ -89,3 +93,7 @@ async def calculate_price(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("میخوای دوباره حساب کنی؟", reply_markup=reply_markup)
     return ConversationHandler.END
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+application = Application.builder(…
