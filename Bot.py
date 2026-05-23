@@ -1,3 +1,4 @@
+
 import os
 import logging
 from flask import Flask, request
@@ -96,6 +97,6 @@ async def calculate_price(update: Update, context: CallbackContext):
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-application = Application.builder().token(BOT_TOKEN).build()
-
-conv_handler = ConversationHandler…
+builder = Application.builder()
+builder = builder.token(BOT_TOKEN)
+application = builder.build()...
