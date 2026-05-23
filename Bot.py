@@ -1,8 +1,8 @@
 import os
 import logging
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler, CallbackQueryHandler, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler, CallbackQueryHandler
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -97,3 +97,5 @@ async def calculate_price(update: Update, context: CallbackContext):
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 application = Application.builder().token(BOT_TOKEN).build()
+
+conv_handler = ConversationHandler…
