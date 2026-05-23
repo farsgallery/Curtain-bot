@@ -89,5 +89,3 @@ async def calculate_price(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("میخوای دوباره حساب کنی؟", reply_markup=reply_markup)
     return ConversationHandler.END
-
-asy
