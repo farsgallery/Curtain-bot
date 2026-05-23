@@ -96,4 +96,6 @@ async def calculate_price(update: Update, context: CallbackContext):
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-application = Applica...
+application = Application.builder().token(BOT_TOKEN).build()
+
+conv_handler = ConversationHandler…
