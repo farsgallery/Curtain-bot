@@ -65,6 +65,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     context.user_data["curtain_type"] = query.data
@@ -76,7 +77,7 @@ async def select_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }[query.data]
 
     await query.edit_message_text(
-        f"✅ پرده {type_name} انتخاب شد.\n\nعرض پرده را به متر وارد کن:"
+        f"✅ پرده {type_name} انتخاب شد.\n\nعرض پرده را به سانتیمتر وارد کن:"
     )
 
     return ENTERING_WIDTH
@@ -85,46 +86,58 @@ async def select_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
-        width = float(update.message.text)
+        width_cm = float(update.message.text)
 
-        if width <= 0:
-            await update.message.reply_text("❌ عدد مثبت وارد کن")
+        if width_cm <= 0:
+            await update.message.reply_text("❌ عدد معتبر وارد کن")
             return ENTERING_WIDTH
 
-        context.user_data["width"] = width
+        width_m = width_cm / 100
+
+        context.user_data["width"] = width_m
+        context.user_data["width_cm"] = width_cm
 
         curtain_type = context.user_data["curtain_type"]
 
         min_height = MIN_HEIGHT[curtain_type]
 
         if min_height > 0:
+
             await update.message.reply_text(
-                f"ارتفاع را وارد کن (حداقل {min_height} متر):"
+                "ارتفاع پرده را به سانتیمتر وارد کن:"
             )
+
             return ENTERING_HEIGHT
 
         return await calculate_price(update, context)
 
     except ValueError:
+
         await update.message.reply_text("❌ فقط عدد وارد کن")
+
         return ENTERING_WIDTH
 
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
-        height = float(update.message.text)
+        height_cm = float(update.message.text)
 
-        if height <= 0:
-            await update.message.reply_text("❌ عدد مثبت وارد کن")
+        if height_cm <= 0:
+            await update.message.reply_text("❌ عدد معتبر وارد کن")
             return ENTERING_HEIGHT
 
-        context.user_data["height"] = height
+        height_m = height_cm / 100
+
+        context.user_data["height"] = height_m
+        context.user_data["height_cm"] = height_cm
 
         return await calculate_price(update, context)
 
     except ValueError:
+
         await update.message.reply_text("❌ فقط عدد وارد کن")
+
         return ENTERING_HEIGHT
 
 
@@ -133,8 +146,10 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ctype = context.user_data["curtain_type"]
 
     width = context.user_data["width"]
-
     height = context.user_data.get("height", 1)
+
+    width_cm = context.user_data.get("width_cm", 0)
+    height_cm = context.user_data.get("height_cm", 0)
 
     area = width * height
 
@@ -144,7 +159,7 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if min_h > 0 and height < min_h:
 
         await update.message.reply_text(
-            f"❌ حداقل ارتفاع {min_h} متر است"
+            "❌ ابعاد وارد شده مجاز نیست"
         )
 
         return ConversationHandler.END
@@ -152,7 +167,7 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if area < min_a:
 
         await update.message.reply_text(
-            f"❌ حداقل متراژ {min_a} متر مربع است"
+            "❌ ابعاد وارد شده مجاز نیست"
         )
 
         return ConversationHandler.END
@@ -170,12 +185,11 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = f"""
 ✅ محاسبه قیمت پرده {type_name}
 
-📐 عرض: {width} متر
-📏 ارتفاع: {height} متر
-🧮 مساحت: {area:.2f} متر مربع
+📐 عرض: {width_cm:.0f} سانتیمتر
+📏 ارتفاع: {height_cm:.0f} سانتیمتر
 
-💰 قیمت هر متر مربع:
-{price_per_sqm:,} تومان
+🧮 مساحت:
+{area:.2f} متر مربع
 
 💵 قیمت نهایی:
 {total_price:,.0f} تومان
@@ -208,7 +222,7 @@ async def restart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
 
-    TOKEN = "توکن جدید ربات"
+    TOKEN = "8737297309:AAEeKqTkaOidugY_D7fpgN0SPY_e6gflmhs"
 
     app = Application.builder().token(TOKEN).build()
 
