@@ -61,7 +61,7 @@ async def get_height(update: Update, context: CallbackContext):
 async def calculate_price(update: Update, context: CallbackContext):
     ctype = context.user_data["curtain_type"]
     width = context.user_data["width"]
-    height = context.user_data.get("height", 0)
+    height = context.user_هdata.get("height", 0)
     area = width * height
     min_h = MIN_HEIGHT[ctype]
     min_a = MIN_AREA[ctype]
@@ -95,4 +95,4 @@ async def restart_callback(update: Update, context: CallbackContext):
     await query.answer()
     return await start(update, context)
 
-def main():…
+def main():...
