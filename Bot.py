@@ -37,6 +37,7 @@ SELECTING_TYPE, ENTERING_WIDTH, ENTERING_HEIGHT = range(3)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     keyboard = [
         [InlineKeyboardButton("پرده شید", callback_data="shid")],
         [InlineKeyboardButton("پرده زبرا", callback_data="zara")],
@@ -45,15 +46,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "سلام 👋\nنوع پرده رو انتخاب کن:",
-        reply_markup=reply_markup
-    )
+    text = "سلام 👋\nنوع پرده رو انتخاب کن:"
+
+    if update.message:
+        await update.message.reply_text(
+            text,
+            reply_markup=reply_markup
+        )
+    else:
+        await update.callback_query.message.reply_text(
+            text,
+            reply_markup=reply_markup
+        )
 
     return SELECTING_TYPE
 
 
 async def select_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
     await query.answer()
 
@@ -66,44 +76,47 @@ async def select_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }[query.data]
 
     await query.edit_message_text(
-        f"پرده {type_name} انتخاب شد.\n\nعرض پرده رو به متر وارد کن:"
+        f"✅ پرده {type_name} انتخاب شد.\n\nعرض پرده را به متر وارد کن:"
     )
 
     return ENTERING_WIDTH
 
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     try:
         width = float(update.message.text)
 
         if width <= 0:
-            await update.message.reply_text("عدد مثبت وارد کن")
+            await update.message.reply_text("❌ عدد مثبت وارد کن")
             return ENTERING_WIDTH
 
         context.user_data["width"] = width
 
         curtain_type = context.user_data["curtain_type"]
+
         min_height = MIN_HEIGHT[curtain_type]
 
         if min_height > 0:
             await update.message.reply_text(
-                f"ارتفاع رو وارد کن (حداقل {min_height} متر):"
+                f"ارتفاع را وارد کن (حداقل {min_height} متر):"
             )
             return ENTERING_HEIGHT
-        else:
-            return await calculate_price(update, context)
+
+        return await calculate_price(update, context)
 
     except ValueError:
-        await update.message.reply_text("فقط عدد وارد کن")
+        await update.message.reply_text("❌ فقط عدد وارد کن")
         return ENTERING_WIDTH
 
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     try:
         height = float(update.message.text)
 
         if height <= 0:
-            await update.message.reply_text("عدد مثبت وارد کن")
+            await update.message.reply_text("❌ عدد مثبت وارد کن")
             return ENTERING_HEIGHT
 
         context.user_data["height"] = height
@@ -111,13 +124,16 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await calculate_price(update, context)
 
     except ValueError:
-        await update.message.reply_text("فقط عدد وارد کن")
+        await update.message.reply_text("❌ فقط عدد وارد کن")
         return ENTERING_HEIGHT
 
 
 async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     ctype = context.user_data["curtain_type"]
+
     width = context.user_data["width"]
+
     height = context.user_data.get("height", 1)
 
     area = width * height
@@ -126,18 +142,23 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     min_a = MIN_AREA[ctype]
 
     if min_h > 0 and height < min_h:
+
         await update.message.reply_text(
             f"❌ حداقل ارتفاع {min_h} متر است"
         )
+
         return ConversationHandler.END
 
     if area < min_a:
+
         await update.message.reply_text(
             f"❌ حداقل متراژ {min_a} متر مربع است"
         )
+
         return ConversationHandler.END
 
     price_per_sqm = PRICES[ctype]
+
     total_price = area * price_per_sqm
 
     type_name = {
@@ -153,7 +174,7 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📏 ارتفاع: {height} متر
 🧮 مساحت: {area:.2f} متر مربع
 
-💰 قیمت هر متر:
+💰 قیمت هر متر مربع:
 {price_per_sqm:,} تومان
 
 💵 قیمت نهایی:
@@ -177,34 +198,28 @@ async def calculate_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def restart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
+
     await query.answer()
 
-    keyboard = [
-        [InlineKeyboardButton("پرده شید", callback_data="shid")],
-        [InlineKeyboardButton("پرده زبرا", callback_data="zara")],
-        [InlineKeyboardButton("پرده کرکره", callback_data="karkareh")]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.message.reply_text(
-        "نوع پرده رو انتخاب کن:",
-        reply_markup=reply_markup
-    )
-
-    return SELECTING_TYPE
+    return await start(update, context)
 
 
 def main():
-    TOKEN = "8737297309:AAEeKqTkaOidugY_D7fpgN0SPY_e6gflmhs"
+
+    TOKEN = "توکن جدید ربات"
 
     app = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+
+        entry_points=[
+            CommandHandler("start", start)
+        ],
 
         states={
+
             SELECTING_TYPE: [
                 CallbackQueryHandler(
                     select_type,
@@ -213,15 +228,23 @@ def main():
             ],
 
             ENTERING_WIDTH: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, get_width)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND,
+                    get_width
+                )
             ],
 
             ENTERING_HEIGHT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, get_height)
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND,
+                    get_height
+                )
             ],
         },
 
-        fallbacks=[],
+        fallbacks=[
+            CommandHandler("start", start)
+        ],
     )
 
     app.add_handler(conv_handler)
@@ -233,7 +256,7 @@ def main():
         )
     )
 
-    print("Bot is running...")
+    print("✅ Bot is running...")
 
     app.run_polling()
 
