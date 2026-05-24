@@ -197,7 +197,7 @@ async def restart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    TOKEN = 8737297309:AAEeKqTkaOidugY_D7fpgN0SPY_e6gflmhs
+    TOKEN = "8737297309:AAEeKqTkaOidugY_D7fpgN0SPY_e6gflmhs"
 
     app = Application.builder().token(TOKEN).build()
 
