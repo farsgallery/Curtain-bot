@@ -1,5 +1,8 @@
+```python
+# -*- coding: utf-8 -*-
+
 import logging
-from datetime import datetime
+import jdatetime
 
 from telegram import (
     Update,
@@ -35,6 +38,7 @@ PRODUCTS = {
         "min_height": 200,
         "min_area": 2,
         "colors": ["⚪ سفید", "🌫 طوسی", "🟤 کرم"],
+        "link": "https://farsgallery.com/product-category/curtains/shid/",
     },
 
     "shid_blackout": {
@@ -43,6 +47,7 @@ PRODUCTS = {
         "min_height": 200,
         "min_area": 2,
         "colors": ["⚪ سفید", "🌫 طوسی", "🟤 کرم"],
+        "link": "https://farsgallery.com/product-category/curtains/shid/",
     },
 
     "zebra": {
@@ -51,6 +56,7 @@ PRODUCTS = {
         "min_height": 150,
         "min_area": 1.5,
         "colors": ["⚪ سفید", "🌫 طوسی", "🤎 قهوه ای"],
+        "link": "https://farsgallery.com/product-category/curtains/zebra/simple/",
     },
 
     "metal": {
@@ -59,6 +65,7 @@ PRODUCTS = {
         "min_height": 0,
         "min_area": 1.5,
         "colors": ["⚪ سفید", "🌫 طوسی", "⚫ مشکی"],
+        "link": "https://farsgallery.com/product-category/curtains/cercere/25mil/",
     },
 }
 
@@ -69,6 +76,7 @@ MAIN_MENU, SELECT_PRODUCT, GET_WIDTH, GET_HEIGHT = range(4)
 # ---------------- منوی دائمی ----------------
 
 reply_menu = ReplyKeyboardMarkup(
+
     [
         ["🏠 شروع"],
         ["📍 آدرس و شماره تماس"],
@@ -76,20 +84,9 @@ reply_menu = ReplyKeyboardMarkup(
         ["🌐 وب سایت خرید آنلاین"],
         ["💡 راهنمایی و پیشنهاد نوع پرده"],
     ],
+
     resize_keyboard=True
 )
-
-# ---------------- دکمه های عمومی ----------------
-
-def nav_buttons():
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("⬅️ بازگشت", callback_data="back")
-        ],
-        [
-            InlineKeyboardButton("🏠 شروع دوباره", callback_data="back_start")
-        ]
-    ])
 
 # ---------------- استارت ----------------
 
@@ -102,12 +99,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
 
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم",
                 callback_data="price"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "2️⃣ میخواهم ثبت سفارش انجام بدم",
@@ -131,6 +130,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
 
         query = update.callback_query
+
         await query.answer()
 
         await query.message.reply_text(
@@ -179,24 +179,20 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "💡 راهنمایی و پیشنهاد نوع پرده":
 
         keyboard = [
+
             [
                 InlineKeyboardButton(
                     "🏢 اداری و تجاری",
                     callback_data="office"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🏠 مسکونی",
                     callback_data="home"
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    "🏠 شروع دوباره",
-                    callback_data="back_start"
-                )
-            ]
         ]
 
         await update.message.reply_text(
@@ -204,40 +200,12 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-# ---------------- بازگشت ----------------
-
-async def back_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    query = update.callback_query
-    await query.answer()
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم",
-                callback_data="price"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "2️⃣ میخواهم ثبت سفارش انجام بدم",
-                callback_data="order"
-            )
-        ],
-    ]
-
-    await query.message.reply_text(
-        "⬅️ برگشت به منوی قبلی",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-    return MAIN_MENU
-
 # ---------------- راهنمایی ----------------
 
 async def suggestion(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     if query.data == "office":
@@ -248,9 +216,6 @@ async def suggestion(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "🏢 پرده کرکره فلزی",
                     callback_data="metal"
                 )
-            ],
-            [
-                InlineKeyboardButton("⬅️ بازگشت", callback_data="back")
             ]
         ]
 
@@ -264,21 +229,20 @@ async def suggestion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "home":
 
         keyboard = [
+
             [
                 InlineKeyboardButton(
                     "🪟 پرده شید ساده",
                     callback_data="shid_simple"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🦓 پرده زبرا",
                     callback_data="zebra"
                 )
             ],
-            [
-                InlineKeyboardButton("⬅️ بازگشت", callback_data="back")
-            ]
         ]
 
         await query.message.reply_text(
@@ -293,41 +257,41 @@ async def suggestion(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
+    # استعلام قیمت
     if query.data == "price":
 
         keyboard = [
+
             [
                 InlineKeyboardButton(
                     "🪟 پرده شید ساده",
                     callback_data="shid_simple"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🌑 پرده شید بلک اوت",
                     callback_data="shid_blackout"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🦓 پرده زبرا",
                     callback_data="zebra"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🏢 پرده کرکره فلزی",
                     callback_data="metal"
                 )
             ],
-            [
-                InlineKeyboardButton("⬅️ بازگشت", callback_data="back")
-            ],
-            [
-                InlineKeyboardButton("🏠 شروع دوباره", callback_data="back_start")
-            ]
         ]
 
         await query.message.reply_text(
@@ -337,36 +301,38 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return SELECT_PRODUCT
 
+    # ثبت سفارش
     elif query.data == "order":
 
         keyboard = [
+
             [
                 InlineKeyboardButton(
                     "🪟 پرده شید ساده",
                     callback_data="order_shid_simple"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🌑 پرده شید بلک اوت",
                     callback_data="order_shid_blackout"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🦓 پرده زبرا",
                     callback_data="order_zebra"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🏢 پرده کرکره فلزی",
                     callback_data="order_metal"
                 )
             ],
-            [
-                InlineKeyboardButton("⬅️ بازگشت", callback_data="back")
-            ]
         ]
 
         await query.message.reply_text(
@@ -379,44 +345,46 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def order_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     data = {
 
         "order_shid_simple":
-        "🪟 پرده شید ساده\n\n"
-        "🔗 لینک خرید:https://farsgallery.com/product-category/curtains/shid/",
+        "🪟 پرده شید ساده\n"
+        "🏠 پیشنهاد ما برای مسکونی\n\n"
+        "🔗 لینک خرید:\nhttps://farsgallery.com/product-category/curtains/shid/",
 
         "order_shid_blackout":
-        "🌑 پرده شید بلک اوت\n\n"
-        "🔗 لینک خرید:https://farsgallery.com/product-category/curtains/shid/",
+        "🌑 پرده شید بلک اوت\n"
+        "💻 مناسب اداری و ویدیو پروژکتور\n\n"
+        "🔗 لینک خرید:\nhttps://farsgallery.com/product-category/curtains/shid/",
 
         "order_zebra":
-        "🦓 پرده زبرا\n\n"
-        "🔗 لینک خرید:https://farsgallery.com/product-category/curtains/zebra/simple/",
+        "🦓 پرده زبرا\n"
+        "🏠 پیشنهاد ما برای مسکونی\n\n"
+        "🔗 لینک خرید:\nhttps://farsgallery.com/product-category/curtains/zebra/simple/",
 
         "order_metal":
-        "🏢 پرده کرکره فلزی\n\n"
-        "🔗 لینک خرید:https://farsgallery.com/product-category/curtains/cercere/25mil/",
+        "🏢 پرده کرکره فلزی\n"
+        "🏬 مناسب اداری و تجاری\n\n"
+        "🔗 لینک خرید:\nhttps://farsgallery.com/product-category/curtains/cercere/25mil/",
     }
 
-    await query.message.reply_text(
-        data[query.data],
-        reply_markup=nav_buttons()
-    )
+    await query.message.reply_text(data[query.data])
 
 # ---------------- انتخاب پرده ----------------
 
 async def select_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     context.user_data["product"] = query.data
 
     await query.message.reply_text(
-        "📐 عرض را به سانتیمتر وارد کنید:",
-        reply_markup=nav_buttons()
+        "📐 عرض را به سانتیمتر وارد کنید:"
     )
 
     return GET_WIDTH
@@ -432,8 +400,7 @@ async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["width"] = width
 
         await update.message.reply_text(
-            "📏 ارتفاع را به سانتیمتر وارد کنید:",
-            reply_markup=nav_buttons()
+            "📏 ارتفاع را به سانتیمتر وارد کنید:"
         )
 
         return GET_HEIGHT
@@ -455,38 +422,45 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         height = float(update.message.text)
 
         product_key = context.user_data["product"]
+
         product = PRODUCTS[product_key]
+
         width = context.user_data["width"]
 
-        messages = []
+        warning_text = ""
 
+        # حداقل ارتفاع
         if product["min_height"] > 0:
 
             if height < product["min_height"]:
 
-                messages.append(
-                    f"⚠️ به خاطر قانون {product['name']} "
-                    f"کمتر از {product['min_height']} "
-                    f"من {product['min_height']} در نظر گرفتم"
+                warning_text += (
+                    f"\n⚠️ ارتفاع کمتر از "
+                    f"{product['min_height']} سانت بود "
+                    f"و طبق قوانین همان "
+                    f"{product['min_height']} محاسبه شد."
                 )
 
                 height = product["min_height"]
 
+        # متر مربع
         area = (width / 100) * (height / 100)
 
         if area < product["min_area"]:
 
-            messages.append(
-                f"⚠️ به خاطر قانون {product['name']} "
-                f"کمتر از متراژ {product['min_area']} "
-                f"همان {product['min_area']} در نظر گرفتم"
+            warning_text += (
+                f"\n⚠️ متراژ کمتر از "
+                f"{product['min_area']} متر مربع بود "
+                f"و طبق قوانین همان "
+                f"{product['min_area']} محاسبه شد."
             )
 
             area = product["min_area"]
 
         total_price = area * product["price"]
 
-        today = datetime.now().strftime("%Y/%m/%d")
+        # تاریخ شمسی
+        today = jdatetime.date.today().strftime("%Y/%m/%d")
 
         result = f"""
 📅 قیمت امروز
@@ -499,6 +473,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 📏 ارتفاع:
 {height:.0f} سانتیمتر
+{warning_text}
 
 🧮 متر مربع:
 {area:.2f}
@@ -508,45 +483,39 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 💵 قیمت نهایی:
 {total_price:,.0f} تومان
+
+📦 هر شهری باشی ارسال میکنم
+🛡 2 سال ضمانتش میکنم
+🚚 سه روز کاری تحویلت میدم
+✨ کیفیت درجه یکه 😍
 """
 
-        if messages:
-
-            for msg in messages:
-                await update.message.reply_text(msg)
-
-        await update.message.reply_text(result)
-
-        await update.message.reply_text(
-            "🚚 سه روز کاری تحویلت میدم\n\n"
-            "📦 هر شهری باشی ارسال میکنم\n\n"
-            "🛡 2 سال ضمانت\n\n"
-            "✨ کیفیت درجه یکه 😍"
-        )
-
         keyboard = [
+
             [
                 InlineKeyboardButton(
-                    "🎨 میخوای رنگ بندیشو بگم؟",
+                    "🎨 رنگ بندی",
                     callback_data=f"color_{product_key}"
                 )
             ],
+
             [
                 InlineKeyboardButton(
-                    "🔄 دوباره حساب کن",
-                    callback_data="price"
+                    "🛒 میخوای خرید کنی؟",
+                    url=product["link"]
                 )
             ],
+
             [
                 InlineKeyboardButton(
-                    "🏠 شروع دوباره",
+                    "🔄 شروع دوباره",
                     callback_data="back_start"
                 )
             ]
         ]
 
         await update.message.reply_text(
-            "👇 انتخاب کن:",
+            result,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -565,6 +534,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def color_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     product_key = query.data.replace("color_", "")
@@ -576,25 +546,7 @@ async def color_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for color in colors:
         text += f"{color}\n"
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "🔄 دوباره حساب کن",
-                callback_data="price"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏠 شروع دوباره",
-                callback_data="back_start"
-            )
-        ]
-    ]
-
-    await query.message.reply_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await query.message.reply_text(text)
 
 # ---------------- اجرای ربات ----------------
 
@@ -633,11 +585,6 @@ def main():
                 ),
 
                 CallbackQueryHandler(
-                    back_handler,
-                    pattern="^back$"
-                ),
-
-                CallbackQueryHandler(
                     color_handler,
                     pattern="^color_"
                 ),
@@ -654,16 +601,6 @@ def main():
                     select_product,
                     pattern="^(shid_simple|shid_blackout|zebra|metal)$"
                 ),
-
-                CallbackQueryHandler(
-                    start,
-                    pattern="^back_start$"
-                ),
-
-                CallbackQueryHandler(
-                    back_handler,
-                    pattern="^back$"
-                ),
             ],
 
             GET_WIDTH: [
@@ -671,17 +608,7 @@ def main():
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
                     get_width
-                ),
-
-                CallbackQueryHandler(
-                    start,
-                    pattern="^back_start$"
-                ),
-
-                CallbackQueryHandler(
-                    back_handler,
-                    pattern="^back$"
-                ),
+                )
             ],
 
             GET_HEIGHT: [
@@ -689,17 +616,7 @@ def main():
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
                     get_height
-                ),
-
-                CallbackQueryHandler(
-                    start,
-                    pattern="^back_start$"
-                ),
-
-                CallbackQueryHandler(
-                    back_handler,
-                    pattern="^back$"
-                ),
+                )
             ],
         },
 
@@ -718,3 +635,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
