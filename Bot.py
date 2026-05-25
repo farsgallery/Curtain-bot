@@ -482,7 +482,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 {total_price:,.0f} تومان
 
 📦 هر شهری باشی ارسال میکنم
-🛡 2 سال ضمانتش میکنم
+🛡 2 سال ضمانت
 🚚 سه روز کاری تحویلت میدم
 ✨ کیفیت درجه یکه 😍
 """
