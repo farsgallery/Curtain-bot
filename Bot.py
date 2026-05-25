@@ -12,7 +12,7 @@ from telegram.ext import (
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "توکن_ربات"
+TOKEN = "8737297309:AAEeKqTkaOidugY_D7fpgN0SPY_e6gflmhs"
 
 # ---------------- محصولات ----------------
 
