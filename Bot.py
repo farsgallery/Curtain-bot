@@ -76,10 +76,10 @@ reply_menu = ReplyKeyboardMarkup(
 
     [
         ["🏠 شروع"],
-        ["📍 آدرس و شماره تماس"],
-        ["🕒 ساعات کاری"],
-        ["🌐 وب سایت خرید آنلاین"],
         ["💡 راهنمایی و پیشنهاد نوع پرده"],
+        ["🌐 وب سایت خرید آنلاین"],
+        ["🕒 ساعات کاری"],
+        ["📍 آدرس و شماره تماس"],
     ],
 
     resize_keyboard=True
@@ -257,7 +257,6 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer()
 
-    # استعلام قیمت
     if query.data == "price":
 
         keyboard = [
@@ -298,7 +297,6 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return SELECT_PRODUCT
 
-    # ثبت سفارش
     elif query.data == "order":
 
         keyboard = [
@@ -426,7 +424,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         warning_text = ""
 
-        # حداقل ارتفاع
         if product["min_height"] > 0:
 
             if height < product["min_height"]:
@@ -440,7 +437,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 height = product["min_height"]
 
-        # متر مربع
         area = (width / 100) * (height / 100)
 
         if area < product["min_area"]:
@@ -456,7 +452,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         total_price = area * product["price"]
 
-        # تاریخ شمسی
         today = jdatetime.date.today().strftime("%Y/%m/%d")
 
         result = f"""
@@ -626,9 +621,24 @@ def main():
 
     app.add_handler(conv_handler)
 
+    app.add_handler(
+        MessageHandler(
+            filters.Regex("^🏠 شروع$"),
+            start
+        )
+    )
+
+    app.add_handler(
+        CallbackQueryHandler(
+            start,
+            pattern="^back_start$"
+        )
+    )
+
     print("✅ Bot is running...")
 
     app.run_polling()
 
 if __name__ == "__main__":
     main()
+```
