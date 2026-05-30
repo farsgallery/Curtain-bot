@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import logging
 import jdatetime
 import sqlite3
