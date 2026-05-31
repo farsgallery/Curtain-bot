@@ -1,6 +1,32 @@
 import logging
 import jdatetime
 
+import sqlite3
+
+ADMIN_ID = 333050909
+
+conn = sqlite3.connect("bot.db", check_same_thread=False)
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users(
+user_id INTEGER PRIMARY KEY
+)
+""")
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS orders(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+user_id INTEGER,
+product TEXT,
+price INTEGER
+)
+""")
+
+conn.commit()
+
+
+
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -540,6 +566,20 @@ async def color_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.message.reply_text(text)
 
+
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    users = cur.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    orders = cur.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+
+    await update.message.reply_text(
+        f"📊 آمار ربات\n\n👥 کاربران: {users}\n📦 سفارش ها: {orders}"
+    )
+
+
 # ---------------- اجرای ربات ----------------
 
 def main():
@@ -620,6 +660,8 @@ def main():
     )
 
     app.add_handler(conv_handler)
+
+    app.add_handler(CommandHandler("stats", stats))
 
     app.add_handler(
         MessageHandler(
