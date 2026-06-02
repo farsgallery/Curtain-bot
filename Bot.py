@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@YourChannel'
+CHANNEL_USERNAME = '@irandecoration_gallery'
 
 from telegram.ext import (
     Application,
