@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:aafbv78gjvc4ilhaaz0pqs6hvsd7kl5_guq"
+TOKEN = "8737297309:AAFBV78gJvC4ilHAAZ0pQS6hVsD7KL5_guQ"
 
 # ---------------- تنظیمات پرده ----------------
 
