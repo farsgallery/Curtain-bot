@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@irandecoration_gallery'
+CHANNEL_USERNAME = '@YourChannel'
 
 from telegram.ext import (
     Application,
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:aafbv78gjvc4ilhaaz0pqs6hvsd7kl5_guq"
+TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -119,11 +119,11 @@ async def check_join(update, context):
 
 # ---------------- استارت ----------------
 
-return conversationHandler.END
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not await is_member(update.effective_user.id, context):
         await force_join(update, context)
-        return MAIN_MENU
+        return ConversationHandler.END
 
     text = """
 🎨 به ربات مجموعه هُنری فــارس گـالری خوش آمدید
