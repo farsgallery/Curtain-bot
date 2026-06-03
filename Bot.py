@@ -123,7 +123,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not await is_member(update.effective_user.id, context):
         await force_join(update, context)
-        return ConversationHandler.END
+        return MAINMENU
 
     text = """
 🎨 به ربات مجموعه هُنری فــارس گـالری خوش آمدید
