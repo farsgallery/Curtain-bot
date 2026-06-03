@@ -8,6 +8,10 @@ from telegram import (
     ReplyKeyboardMarkup,
 )
 
+from telegram.error import BadRequest
+
+CHANNEL_USERNAME = '@YourChannel'
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -23,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:AAH_UtvQffkSdaqAdelAnNFISf5NsI9RImE"
+TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -85,9 +89,62 @@ reply_menu = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+
+async def is_member(user_id, context):
+    try:
+        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return member.status in ["creator","administrator","member"]
+    except Exception:
+        return False
+
+async def force_join(update, context):
+    keyboard=[
+        [InlineKeyboardButton("📢 عضویت در کانال", url=f"https://t.me/{CHANNEL_USERNAME.replace('@','')}")],
+        [InlineKeyboardButton("✅ تایید عضویت", callback_data="check_join")]
+    ]
+    msg="❌ برای استفاده از ربات ابتدا عضو کانال شوید."
+    if update.message:
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        await update.callback_query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def check_join(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    if not await is_member(query.from_user.id, context):
+        await query.message.reply_text("❌ هنوز عضو کانال نشده‌اید.")
+        return
+
+    context.user_data.clear()
+
+    text = """
+🎨 به ربات مجموعه هُنری فــارس گـالری خوش آمدید
+
+✨ میتوانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید.
+"""
+
+    keyboard = [
+        [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="price")],
+        [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش انجام بدم", callback_data="order")]
+    ]
+
+    await query.message.reply_text(text, reply_markup=reply_menu)
+    await query.message.reply_text(
+        "👇 یکی از گزینه ها را انتخاب کنید:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+    return MAIN_MENU
+
+
 # ---------------- استارت ----------------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_member(update.effective_user.id, context):
+        await force_join(update, context)
+        return ConversationHandler.END
 
     text = """
 🎨 به ربات مجموعه هُنری فــارس گـالری خوش آمدید
@@ -549,7 +606,8 @@ def main():
     conv_handler = ConversationHandler(
 
         entry_points=[
-            CommandHandler("start", start)
+            CommandHandler("start", start),
+            CallbackQueryHandler(check_join, pattern="^check_join$")
         ],
 
         states={
@@ -634,6 +692,7 @@ def main():
             pattern="^back_start$"
         )
     )
+
 
     print("✅ Bot is running...")
 
