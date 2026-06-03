@@ -594,7 +594,7 @@ def main():
 
                 CallbackQueryHandler(
                     check_join,
-                    pattern="^chek_join$")
+                    pattern="^(chek_join)$"
                 ),
 
                 CallbackQueryHandler(
