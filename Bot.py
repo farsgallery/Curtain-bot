@@ -593,6 +593,11 @@ def main():
             MAIN_MENU: [
 
                 CallbackQueryHandler(
+                    check_join,
+                    pattern="^chek_join$")
+                ),
+
+                CallbackQueryHandler(
                     main_menu,
                     pattern="^(price|order)$"
                 ),
