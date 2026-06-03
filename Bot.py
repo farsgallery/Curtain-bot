@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@irandecoration_gallery'
+CHANNEL_USERNAME = '@YourChannel'
 
 from telegram.ext import (
     Application,
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:aafbv78gjvc4ilhaaz0pqs6hvsd7kl5_guq"
+TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -585,7 +585,8 @@ def main():
     conv_handler = ConversationHandler(
 
         entry_points=[
-            CommandHandler("start", start)
+            CommandHandler("start", start),
+            CallbackQueryHandler(check_join, pattern="^check_join$")
         ],
 
         states={
@@ -670,8 +671,6 @@ def main():
             pattern="^back_start$"
         )
     )
-
-    app.add_handler(CallbackQueryHandler(check_join, pattern="^check_join$"))
 
     print("✅ Bot is running...")
 
