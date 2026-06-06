@@ -79,7 +79,7 @@ MAIN_MENU, SELECT_PRODUCT, GET_WIDTH, GET_HEIGHT = range(4)
 reply_menu = ReplyKeyboardMarkup(
 
     [
-        ["🏠 شروع"],
+        ["🏠 /start شروع"],
         ["💡 راهنمایی و پیشنهاد نوع پرده"],
         ["🌐 وب سایت خرید آنلاین"],
         ["🕒 ساعات کاری"],
@@ -686,7 +686,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.Regex("^🏠 شروع$"),
+            filters.Regex("^/start$"),
             start
         )
     )
