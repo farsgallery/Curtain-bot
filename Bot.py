@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@irandecoration_gallery'
+CHANNEL_USERNAME = '@YourChannel'
 
 from telegram.ext import (
     Application,
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:AAFS-hg2x4DbTWf0HDrE2Iej7BN5QP2mwqs"
+TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -689,6 +689,14 @@ def main():
         CallbackQueryHandler(
             start,
             pattern="^back_start$"
+        )
+    )
+
+
+    app.add_handler(
+        MessageHandler(
+            filters.Regex("^(💡 راهنمایی و پیشنهاد نوع پرده|🌐 وب سایت خرید آنلاین|🕒 ساعات کاری|📍 آدرس و شماره تماس)$"),
+            menu_handler
         )
     )
 
