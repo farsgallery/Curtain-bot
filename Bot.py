@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@YourChannel'
+CHANNEL_USERNAME = 'irandecoration_gallery'
 
 from telegram.ext import (
     Application,
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
+TOKEN = "8737297309:AAFS-hg2x4DbTWf0HDrE2Iej7BN5QP2mwqs"
 
 # ---------------- تنظیمات پرده ----------------
 
