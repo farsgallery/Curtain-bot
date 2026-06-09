@@ -10,7 +10,7 @@ from telegram import (
 
 from telegram.error import BadRequest
 
-CHANNEL_USERNAME = '@irandecoration_gallery'
+CHANNEL_USERNAME = '@YourChannel'
 
 from telegram.ext import (
     Application,
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:AAFS-hg2x4DbTWf0HDrE2Iej7BN5QP2mwqs"
+TOKEN = "8737297309:AAFEl8XdfWGQb_iNYjuSjido1Tgeo2XL-hA"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -93,14 +93,8 @@ reply_menu = ReplyKeyboardMarkup(
 async def is_member(user_id, context):
     try:
         member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
-        return member.status in [
-            "creator",
-            "administrator",
-            "member",
-            "restricted"
-        ]
-    except Exception as e:
-        print("JOIN CHECK ERROR:", e)
+        return member.status in ["creator","administrator","member"]
+    except Exception:
         return False
 
 async def force_join(update, context):
@@ -450,6 +444,9 @@ async def select_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    if update.message.text in ["🏠 شروع","💡 راهنمایی و پیشنهاد نوع پرده","🌐 وب سایت خرید آنلاین","🕒 ساعات کاری","📍 آدرس و شماره تماس"]:
+        return await menu_handler(update, context)
+
     try:
 
         width = float(update.message.text)
@@ -473,6 +470,9 @@ async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- ارتفاع و محاسبه ----------------
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if update.message.text in ["🏠 شروع","💡 راهنمایی و پیشنهاد نوع پرده","🌐 وب سایت خرید آنلاین","🕒 ساعات کاری","📍 آدرس و شماره تماس"]:
+        return await menu_handler(update, context)
 
     try:
 
@@ -676,9 +676,11 @@ def main():
         },
 
         fallbacks=[
-            CommandHandler("start", start)
+            CommandHandler("start", start),
+            MessageHandler(filters.Regex("^🏠 شروع$"), start)
         ],
 
+        allow_reentry=True,
         per_message=False
     )
 
