@@ -3,7 +3,7 @@ from bale import InlineKeyboardMarkup, InlineKeyboardButton
 from bale.handlers import CommandHandler, CallbackQueryHandler
 from bale.checks import Data
 
-TOKEN = "1707286533:BRQqnArmEadLXFq7kZMaStVZXg6PkCsiQWg"
+TOKEN = "1707286533:8RiZ3SLHubKYeU9qMV3WVWx2cKHuGVDIiMg"
 
 bot = Bot(TOKEN)
 
