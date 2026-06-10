@@ -8,7 +8,7 @@ def send_message(chat_id, text):
 
 # تست کن
 try:
-    send_message("آیدی_چت_خودت", "سلام از ربات!")
+    send_message("822951933", "سلام از ربات!")
     print("✅ پیام رفت!")
 except Exception as e:
     print(f"❌ خطا: {e}")
