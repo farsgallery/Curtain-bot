@@ -1,6 +1,6 @@
 import requests
 
-TOKEN = "توکن_رابات_ت_اینجا_بذار"
+TOKEN = "1707286533:8RiZ3SLHubKYeU9qMV3WVWx2cKHuGVDIiMg"
 
 def send_message(chat_id, text):
     url = f"https://tapi.bale.ai/bot{TOKEN}/sendMessage"
