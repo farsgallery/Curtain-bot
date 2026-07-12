@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-TOKEN = "8737297309:AAGOejgXoxwlGjG2PdcGxkYtzOWJMNPtZA4"
+TOKEN = "8737297309:AAFS-hg2x4DbTWf0HDrE2Iej7BN5QP2mwqs"
 
 # ---------------- تنظیمات پرده ----------------
 
@@ -703,7 +703,17 @@ def main():
 
     print("✅ Bot is running...")
 
-    app.run_polling()
+    import os
+
+    port = int(os.environ.get("PORT", 10000))
+    webhook_base = os.environ["WEBHOOK_URL"].rstrip("/")
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TOKEN,
+        webhook_url=f"{webhook_base}/{TOKEN}",
+        drop_pending_updates=True,
+    )
 
 if __name__ == "__main__":
     main()
