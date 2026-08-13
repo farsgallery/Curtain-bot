@@ -66,12 +66,12 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
 
 async def send_join_channel_message(update: Update):
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 عضویت در کانال فارس گالری", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+        [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
         [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
     ])
     msg_text = (
         "⚠️ **دسترسـی محدود است!**\n\n"
-        "برای استفاده از خدمات و استعلام قیمت ربات فارس گالری، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
+        "برای استفاده از استعلام قیمت ، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
     )
     if update.message:
         await update.message.reply_text(msg_text, reply_markup=keyboard, parse_mode='Markdown')
