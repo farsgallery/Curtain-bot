@@ -290,3 +290,16 @@ def main():
 
 if __name__ == '__main__':
     main()
+import http.server
+import socketserver
+import threading
+import os
+
+# این بخش برای پاس کردن Health Check رندر است
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        httpd.serve_forever()
+
+threading.Thread(target=run_dummy_server, daemon=True).start()
