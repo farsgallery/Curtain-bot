@@ -224,7 +224,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
-        # انتخاب لینک اختصاصی محصول بر اساس پرده انتخاب شده
+        # انتخاب لینک اختصاصی محصول
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
         result_msg = (
@@ -243,9 +243,11 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✨ کیفیت درجه یک 😍😍"
         )
 
+        # اضافه شدن دکمه «شروع دوباره 🔄» به کیبورد شیشه‌ای
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
-            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url=buy_url)]
+            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url=buy_url)],
+            [InlineKeyboardButton("شروع دوباره 🔄", callback_data="start_inquiry")]
         ])
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
