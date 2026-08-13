@@ -1,8 +1,7 @@
 import os
 import math
 import logging
-from datetime import datetime
-import pytz
+import jdatetime
 import http.server
 import socketserver
 import threading
@@ -12,7 +11,7 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
 )
 
-# --- ایجاد وب‌سرور مصنوعی برای حل ارور Port در Render ---
+# --- وب‌سرور مجازی برای پاس کردن تست پورت Render ---
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
     handler = http.server.SimpleHTTPRequestHandler
@@ -28,92 +27,52 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-CHOOSING_CURTAIN, GET_WIDTH, GET_HEIGHT, ASK_COLOR_CONFIRM, SHOW_COLORS = range(5)
+CHOOSING_CURTAIN, GET_WIDTH, GET_HEIGHT = range(3)
 
+# منوی اصلی مطابق تصویر
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
-    ['🧮 میخواهم فقط استعلام قیمت پرده بگیرم', '🛍 میخواهم ثبت سفارش انجام بدم'],
+    ['1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم'],
+    ['2️⃣ میخواهم ثبت سفارش انجام بدم'],
     ['💡 راهنمایی و پیشنهاد نوع پرده', '🌐 وب سایت خرید آنلاین'],
     ['📞 تماس با ما / آدرس', '⏰ ساعات کاری'],
     ['🔄 محاسبه مجدد']
 ], resize_keyboard=True)
 
-def get_today_date():
-    tehran_tz = pytz.timezone('Asia/Tehran')
-    now = datetime.now(tehran_tz)
-    return f"📅 تاریخ امروز: {now.strftime('%Y/%m/%d')}"
+def get_jalali_date():
+    now = jdatetime.datetime.now()
+    return now.strftime('%Y/%m/%d')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg = (
-        f"{get_today_date()}\n\n"
-        "به ربات مجموعه هُنری فــارس گـالری خوش آمدید ✨\n\n"
-        "می‌توانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود "
-        "و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید:"
+        "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
+        "✨ می‌توانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید.\n\n"
+        "👇 یکی از گزینه ها را انتخاب کنید:"
     )
     await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
     return ConversationHandler.END
 
-async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = ReplyKeyboardMarkup([
-        ['🏢 اداری و تجاری', '🏠 مسکونی'],
-        ['🔙 بازگشت به منوی اصلی']
-    ], resize_keyboard=True)
-    await update.message.reply_text("برای چه کاربردی پرده نیاز دارید؟ 🧐", reply_markup=keyboard)
-
-async def handle_suggestion_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == '🏢 اداری و تجاری':
-        keyboard = ReplyKeyboardMarkup([['📌 پرده کرکره فلزی'], ['🔙 بازگشت به منوی اصلی']], resize_keyboard=True)
-        await update.message.reply_text("پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی** است.", reply_markup=keyboard, parse_mode='Markdown')
-    elif text == '🏠 مسکونی':
-        keyboard = ReplyKeyboardMarkup([['📌 پرده شید ساده', '📌 پرده زبرا'], ['🔙 بازگشت به منوی اصلی']], resize_keyboard=True)
-        await update.message.reply_text("پیشنهاد ما برای محیط‌های مسکونی: **پرده شید ساده** یا **پرده زبرا** است.", reply_markup=keyboard, parse_mode='Markdown')
-
-async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "📍 **آدرس:**\n"
-        "شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه یک، مجموعه گالری هنری ایران دکوراسیون (فارس گالری)\n\n"
-        "📞 **شماره تماس:** 07136277172"
-    )
-    await update.message.reply_text(msg, parse_mode='Markdown')
-
-async def show_hours(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "⏰ **ساعات کاری مجموعه:**\n\n☀️ صبح: از 09:00 تا 13:00\n🌙 عصر: از 17:00 تا 21:00"
-    await update.message.reply_text(msg, parse_mode='Markdown')
-
-async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🌐 **وب سایت خرید آنلاین:**\nwww.FarsGallery.com"
-    await update.message.reply_text(msg)
-
-async def start_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
-        "1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - شید رول](https://farsgallery.com)\n\n"
-        "2️⃣ **پرده شید بلک اوت** (پیشنهاد ما برای اداری مخصوصاً اتاق کامپیوتر یا ویدیو پروژکتور)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - شید بلک اوت](https://farsgallery.com)\n\n"
-        "3️⃣ **پرده زبرا** (پیشنهاد ما برای مسکونی)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - زبرا ساده](https://farsgallery.com)\n\n"
-        "4️⃣ **پرده کرکره فلزی** (پیشنهاد ما برای اداری یا تجاری)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - کرکره فلزی ۲۵ میل](https://farsgallery.com)"
-    )
-    await update.message.reply_text(msg, parse_mode='Markdown', disable_web_page_preview=True)
-
 async def start_price_inquiry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = ReplyKeyboardMarkup([
-        ['📌 پرده شید ساده', '📌 پرده شید بلک اوت'],
-        ['📌 پرده زبرا', '📌 پرده کرکره فلزی'],
+        ['پرده شید ساده 🪟'],
+        ['پرده شید بلک اوت 🌚'],
+        ['پرده زبرا 🦓'],
+        ['پرده کرکره فلزی 🏢'],
         ['🔙 بازگشت به منوی اصلی']
     ], resize_keyboard=True)
-    await update.message.reply_text("لطفاً نوع پرده مورد نظر را جهت استعلام قیمت انتخاب کنید:", reply_markup=keyboard)
+    await update.message.reply_text("👇 نوع پرده را انتخاب کنید:", reply_markup=keyboard)
     return CHOOSING_CURTAIN
 
 async def curtain_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    curtain_type = update.message.text.replace('📌 ', '')
-    if curtain_type == '🔙 بازگشت به منوی اصلی':
+    text = update.message.text
+    if text == '🔙 بازگشت به منوی اصلی':
         await update.message.reply_text("به منوی اصلی بازگشتید.", reply_markup=PERSISTENT_KEYBOARD)
         return ConversationHandler.END
     
+    # استخراج نام پرده بدون ایموجی
+    curtain_type = text.replace(' 🪟', '').replace(' 🌚', '').replace(' 🦓', '').replace(' 🏢', '')
     context.user_data['curtain_type'] = curtain_type
+    context.user_data['curtain_icon'] = text
+    
     await update.message.reply_text(f"لطفاً **عرض** پرده را به **سانتی‌متر** وارد کنید (مثال: 150):", parse_mode='Markdown')
     return GET_WIDTH
 
@@ -132,6 +91,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         height = float(update.message.text)
         width = context.user_data['width']
         curtain_type = context.user_data['curtain_type']
+        curtain_icon = context.user_data['curtain_icon']
         
         unit_price = 0
         min_height = 0
@@ -193,22 +153,30 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
+        # قالب نمایش خروجی دقیقاً مطابق تصویر
         result_msg = (
-            f"📊 **نتیجه محاسبات {curtain_type}:**\n\n"
-            f"📏 عرض: {width} سانتی‌متر\n"
-            f"📐 ارتفاع: {height} سانتی‌متر\n"
-            f"📐 متراژ محاسبه شده: {calc_area:.2f} متر مربع\n"
-            f"{rules_text}\n"
-            f"💵 قیمت واحد: {unit_price:,} تومان\n"
-            f"💰 **قیمت نهایی:** {total_price:,} تومان\n\n"
-            "سه روز کاری تحویلت میدم و هر شهری هم که باشی ارسال میکنم و 2 سال هم ضمانتش میکنم و کیفیتشم که درجه یکه دیگه چی میخوای 😍😍"
+            f"📅 17 قیمت امروز\n"
+            f"🗓 تاریخ: {get_jalali_date()}\n\n"
+            f"{curtain_icon}\n\n"
+            f"📐 عرض:\n{int(width)} سانتیمتر\n\n"
+            f"📐 ارتفاع:\n{int(height)} سانتیمتر\n\n"
+            f"🧮 متر مربع:\n{calc_area:.2f}\n\n"
+            f"{rules_text}"
+            f"🪙 قیمت واحد هر مترمربع:\n{unit_price:,} تومان\n\n"
+            f"💵 قیمت نهایی:\n{total_price:,} تومان\n\n"
+            f"📦 هر شهری باشی ارسال میکنم\n"
+            f"🛡 2 سال ضمانت\n"
+            f"🚚 سه روز کاری تحویلت میدم\n"
+            f"✨ کیفیت درجه یک 😍😍"
         )
 
+        # دکمه‌های اینلاین زیر فاکتور
         inline_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("آره 😍 (مشاهده رنگ‌بندی)", callback_data=f"colors_{curtain_type}")]
+            [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
+            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url="https://farsgallery.com")]
         ])
 
-        await update.message.reply_text(result_msg, parse_mode='Markdown', reply_markup=inline_kb)
+        await update.message.reply_text(result_msg, reply_markup=inline_kb)
         await update.message.reply_text("برای محاسبه مجدد یا گزینه‌های دیگر از منوی زیر استفاده کنید:", reply_markup=PERSISTENT_KEYBOARD)
         return ConversationHandler.END
 
@@ -236,22 +204,67 @@ async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 async def color_selected_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("رنگ انتخاب شد!")
-    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از طریق منو روی دکمه «ثبت سفارش» کلیک کنید.")
+    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از طریق منو روی دکمه ثبت سفارش کلیک کنید.")
+
+async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = ReplyKeyboardMarkup([
+        ['🏢 اداری و تجاری', '🏠 مسکونی'],
+        ['🔙 بازگشت به منوی اصلی']
+    ], resize_keyboard=True)
+    await update.message.reply_text("برای چه کاربردی پرده نیاز دارید؟ 🧐", reply_markup=keyboard)
+
+async def handle_suggestion_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == '🏢 اداری و تجاری':
+        keyboard = ReplyKeyboardMarkup([['پرده کرکره فلزی 🏢'], ['🔙 بازگشت به منوی اصلی']], resize_keyboard=True)
+        await update.message.reply_text("پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی** است.", reply_markup=keyboard, parse_mode='Markdown')
+    elif text == '🏠 مسکونی':
+        keyboard = ReplyKeyboardMarkup([['پرده شید ساده 🪟', 'پرده زبرا 🦓'], ['🔙 بازگشت به منوی اصلی']], resize_keyboard=True)
+        await update.message.reply_text("پیشنهاد ما برای محیط‌های مسکونی: **پرده شید ساده** یا **پرده زبرا** است.", reply_markup=keyboard, parse_mode='Markdown')
+
+async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "📍 **آدرس:**\n"
+        "شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه یک، مجموعه گالری هنری ایران دکوراسیون (فارس گالری)\n\n"
+        "📞 **شماره تماس:** 07136277172"
+    )
+    await update.message.reply_text(msg, parse_mode='Markdown')
+
+async def show_hours(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = "⏰ **ساعات کاری مجموعه:**\n\n☀️ صبح: از 09:00 تا 13:00\n🌙 عصر: از 17:00 تا 21:00"
+    await update.message.reply_text(msg, parse_mode='Markdown')
+
+async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = "🌐 **وب سایت خرید آنلاین:**\nwww.FarsGallery.com"
+    await update.message.reply_text(msg)
+
+async def start_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = (
+        "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
+        "1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
+        "🔗 [فروشگاه اینترنتی فارس گالری - شید رول](https://farsgallery.com)\n\n"
+        "2️⃣ **پرده شید بلک اوت** (پیشنهاد ما برای اداری مخصوصاً اتاق کامپیوتر یا ویدیو پروژکتور)\n"
+        "🔗 [فروشگاه اینترنتی فارس گالری - شید بلک اوت](https://farsgallery.com)\n\n"
+        "3️⃣ **پرده زبرا** (پیشنهاد ما برای مسکونی)\n"
+        "🔗 [فروشگاه اینترنتی فارس گالری - زبرا ساده](https://farsgallery.com)\n\n"
+        "4️⃣ **پرده کرکره فلزی** (پیشنهاد ما برای اداری یا تجاری)\n"
+        "🔗 [فروشگاه اینترنتی فارس گالری - کرکره فلزی ۲۵ میل](https://farsgallery.com)"
+    )
+    await update.message.reply_text(msg, parse_mode='Markdown', disable_web_page_preview=True)
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("عملیات لغو شد.", reply_markup=PERSISTENT_KEYBOARD)
     return ConversationHandler.END
 
 def main():
-    # دریافت توکن از متغیر محیطی یا استفاده مستقیم از مقدار دستی
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGcH5LLdjnJB49V2r76cpnxE8qxYcVIz9o")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
     price_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex('^(🧮 میخواهم فقط استعلام قیمت پرده بگیرم|🔄 محاسبه مجدد)$'), start_price_inquiry),
-            MessageHandler(filters.Regex('^📌 '), curtain_chosen)
+            MessageHandler(filters.Regex('^(1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم|🔄 محاسبه مجدد)$'), start_price_inquiry),
+            MessageHandler(filters.Regex('^(پرده شید ساده 🪟|پرده شید بلک اوت 🌚|پرده زبرا 🦓|پرده کرکره فلزی 🏢)$'), curtain_chosen)
         ],
         states={
             CHOOSING_CURTAIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, curtain_chosen)],
@@ -263,7 +276,7 @@ def main():
 
     app.add_handler(CommandHandler('start', start))
     app.add_handler(price_handler)
-    app.add_handler(MessageHandler(filters.Regex('^🛍 میخواهم ثبت سفارش انجام بدم$'), start_order))
+    app.add_handler(MessageHandler(filters.Regex('^2️⃣ میخواهم ثبت سفارش انجام بدم$'), start_order))
     app.add_handler(MessageHandler(filters.Regex('^💡 راهنمایی و پیشنهاد نوع پرده$'), suggest_curtain))
     app.add_handler(MessageHandler(filters.Regex('^(🏢 اداری و تجاری|🏠 مسکونی)$'), handle_suggestion_choice))
     app.add_handler(MessageHandler(filters.Regex('^📞 تماس با ما / آدرس$'), show_contact))
