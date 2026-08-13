@@ -14,6 +14,14 @@ from telegram.ext import (
 # --- آیدی کانال جهت جوین اجباری ---
 CHANNEL_USERNAME = "@irandecoration_gallery"
 
+# --- لینک‌های اختصاصی و مستقیم هر محصول ---
+PRODUCT_LINKS = {
+    'پرده شید ساده': 'https://farsgallery.com/product-category/curtains/shid/',
+    'پرده شید بلک اوت': 'https://farsgallery.com/product-category/curtains/shid/',
+    'پرده زبرا': 'https://farsgallery.com/product-category/curtains/zebra/simple/',
+    'پرده کرکره فلزی': 'https://farsgallery.com/product-category/curtains/cercere/'
+}
+
 # --- وب‌سرور مجازی جهت نگه داشتن ربات روی Render ---
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
@@ -32,7 +40,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 GET_WIDTH, GET_HEIGHT = range(2)
 
-# --- منوی اصلی ثابت پایین (مطابق عکس دوم شما) ---
+# --- منوی اصلی ثابت پایین ---
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['راهنمایی و پیشنهاد نوع پرده 💡'],
@@ -216,7 +224,9 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
-        # فاکتور نهایی (حذف عدد ۱۷ اضافه)
+        # انتخاب لینک اختصاصی محصول بر اساس پرده انتخاب شده
+        buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
+
         result_msg = (
             f" قیمت امروز\n"
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -235,7 +245,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
-            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url="https://farsgallery.com")]
+            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url=buy_url)]
         ])
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
@@ -273,14 +283,14 @@ async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     
     msg = (
         "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
-        "1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - شید رول](https://farsgallery.com/product-category/curtains/shid/)\n\n"
-        "2️⃣ **پرده شید بلک اوت** (پیشنهاد ما برای اداری)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - شید بلک اوت](https://farsgallery.com/product-category/curtains/shid/)\n\n"
-        "3️⃣ **پرده زبرا** (پیشنهاد ما برای مسکونی)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - زبرا ساده](https://farsgallery.com/product-category/curtains/zebra/simple/)\n\n"
-        "4️⃣ **پرده کرکره فلزی** (پیشنهاد ما برای اداری یا تجاری)\n"
-        "🔗 [فروشگاه اینترنتی فارس گالری - کرکره فلزی](https://farsgallery.com/product-category/curtains/cercere/)"
+        f"1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
+        f"🔗 [فروشگاه اینترنتی فارس گالری - شید رول]({PRODUCT_LINKS['پرده شید ساده']})\n\n"
+        f"2️⃣ **پرده شید بلک اوت** (پیشنهاد ما برای اداری)\n"
+        f"🔗 [فروشگاه اینترنتی فارس گالری - شید بلک اوت]({PRODUCT_LINKS['پرده شید بلک اوت']})\n\n"
+        f"3️⃣ **پرده زبرا** (پیشنهاد ما برای مسکونی)\n"
+        f"🔗 [فروشگاه اینترنتی فارس گالری - زبرا ساده]({PRODUCT_LINKS['پرده زبرا']})\n\n"
+        f"4️⃣ **پرده کرکره فلزی** (پیشنهاد ما برای اداری یا تجاری)\n"
+        f"🔗 [فروشگاه اینترنتی فارس گالری - کرکره فلزی]({PRODUCT_LINKS['پرده کرکره فلزی']})"
     )
     await query.message.reply_text(msg, parse_mode='Markdown', disable_web_page_preview=True)
 
@@ -331,7 +341,6 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # مدیریت محاسبه ابعاد با قابلیت لغو خودکار هنگام زدن دکمه‌های منو
     price_conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(select_curtain_callback, pattern="^select_")
