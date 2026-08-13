@@ -11,6 +11,9 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
 )
 
+# --- آیدی کانال شما جهت جوین اجباری ---
+CHANNEL_USERNAME = "@irandecoration_gallery"
+
 # --- وب‌سرور مجازی برای پاس کردن تست پورت Render ---
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
@@ -29,7 +32,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 CHOOSING_CURTAIN, GET_WIDTH, GET_HEIGHT = range(3)
 
-# منوی اصلی مطابق تصویر
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم'],
     ['2️⃣ میخواهم ثبت سفارش انجام بدم'],
@@ -42,7 +44,39 @@ def get_jalali_date():
     now = jdatetime.datetime.now()
     return now.strftime('%Y/%m/%d')
 
+# بررسی عضویت کاربر در کانال
+async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    try:
+        member = await context.bot.get_chat_member(chat_id=CHANNEL_USERNAME, user_id=user_id)
+        if member.status in ['creator', 'administrator', 'member']:
+            return True
+        return False
+    except Exception as e:
+        logging.error(f"Error checking channel membership: {e}")
+        # اگر مشکلی در بررسی کانال پیش آمد، جهت جلوگیری از قفل شدن ربات اجازه دسترسی داده می‌شود
+        return True
+
+# ارسال پیام لزوم عضویت
+async def send_join_channel_message(update: Update):
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 عضویت در کانال فارس گالری", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+        [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
+    ])
+    msg_text = (
+        "⚠️ **دسترسـی محدود است!**\n\n"
+        "برای استفاده از خدمات و استعلام قیمت ربات فارس گالری، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
+    )
+    if update.message:
+        await update.message.reply_text(msg_text, reply_markup=keyboard, parse_mode='Markdown')
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(msg_text, reply_markup=keyboard, parse_mode='Markdown')
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await is_user_member(user_id, context):
+        await send_join_channel_message(update)
+        return ConversationHandler.END
+
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
         "✨ می‌توانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید.\n\n"
@@ -51,7 +85,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
     return ConversationHandler.END
 
+async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    
+    if await is_user_member(user_id, context):
+        await query.message.reply_text("✅ عضویت شما تأیید شد! اکنون می‌توانید از امکانات ربات استفاده کنید.", reply_markup=PERSISTENT_KEYBOARD)
+    else:
+        await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
+
 async def start_price_inquiry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await is_user_member(user_id, context):
+        await send_join_channel_message(update)
+        return ConversationHandler.END
+
     keyboard = ReplyKeyboardMarkup([
         ['پرده شید ساده 🪟'],
         ['پرده شید بلک اوت 🌚'],
@@ -68,7 +117,6 @@ async def curtain_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("به منوی اصلی بازگشتید.", reply_markup=PERSISTENT_KEYBOARD)
         return ConversationHandler.END
     
-    # استخراج نام پرده بدون ایموجی
     curtain_type = text.replace(' 🪟', '').replace(' 🌚', '').replace(' 🦓', '').replace(' 🏢', '')
     context.user_data['curtain_type'] = curtain_type
     context.user_data['curtain_icon'] = text
@@ -153,7 +201,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
-        # قالب نمایش خروجی دقیقاً مطابق تصویر
         result_msg = (
             f"📅 17 قیمت امروز\n"
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -170,7 +217,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✨ کیفیت درجه یک 😍😍"
         )
 
-        # دکمه‌های اینلاین زیر فاکتور
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
             [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url="https://farsgallery.com")]
@@ -207,6 +253,11 @@ async def color_selected_callback(update: Update, context: ContextTypes.DEFAULT_
     await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از طریق منو روی دکمه ثبت سفارش کلیک کنید.")
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await is_user_member(user_id, context):
+        await send_join_channel_message(update)
+        return
+
     keyboard = ReplyKeyboardMarkup([
         ['🏢 اداری و تجاری', '🏠 مسکونی'],
         ['🔙 بازگشت به منوی اصلی']
@@ -239,6 +290,11 @@ async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg)
 
 async def start_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await is_user_member(user_id, context):
+        await send_join_channel_message(update)
+        return
+
     msg = (
         "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
         "1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
@@ -283,6 +339,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex('^⏰ ساعات کاری$'), show_hours))
     app.add_handler(MessageHandler(filters.Regex('^🌐 وب سایت خرید آنلاین$'), show_website))
     
+    app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
     app.add_handler(CallbackQueryHandler(show_colors_callback, pattern="^colors_"))
     app.add_handler(CallbackQueryHandler(color_selected_callback, pattern="^color_selected$"))
 
