@@ -66,12 +66,12 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
 
 async def send_join_channel_message(update: Update):
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
+        [InlineKeyboardButton("📢 عضویت در کانال فارس گالری", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
         [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
     ])
     msg_text = (
         "⚠️ **دسترسـی محدود است!**\n\n"
-        "برای استفاده از استعلام قیمت ، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
+        "برای استفاده از خدمات و استعلام قیمت ربات فارس گالری، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
     )
     if update.message:
         await update.message.reply_text(msg_text, reply_markup=keyboard, parse_mode='Markdown')
@@ -238,12 +238,11 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🪙 قیمت واحد هر مترمربع:\n{unit_price:,} تومان\n\n"
             f"💵 قیمت نهایی:\n{total_price:,} تومان\n\n"
             f"📦 هر شهری باشی ارسال میکنم\n"
-            f"🛡 5 سال ضمانت\n"
+            f"🛡 2 سال ضمانت\n"
             f"🚚 سه روز کاری تحویلت میدم\n"
             f"✨ کیفیت درجه یک 😍😍"
         )
 
-        # اضافه شدن دکمه «شروع دوباره 🔄» به کیبورد شیشه‌ای
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
             [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url=buy_url)],
@@ -305,15 +304,26 @@ async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("برای چه کاربردی پرده نیاز دارید؟ 🧐", reply_markup=keyboard)
     return ConversationHandler.END
 
+# هدایت مستقیم از راهنما به محاسبه قیمت
 async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     if query.data == 'sugg_office':
-        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است."
+        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** و **پرده شید بلک اوت 🌚** است.\n\n👇 جهت استعلام قیمت یکی از موارد زیر را انتخاب کنید:"
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("محاسبه قیمت پرده کرکره فلزی 🏢", callback_data="select_پرده کرکره فلزی")],
+            [InlineKeyboardButton("محاسبه قیمت پرده شید بلک اوت 🌚", callback_data="select_پرده شید بلک اوت")],
+            [InlineKeyboardButton("محاسبه سایر پرده‌ها 🧮", callback_data="start_inquiry")]
+        ])
     else:
-        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید ساده 🪟** یا **پرده زبرا 🦓** است."
-    await query.message.reply_text(msg, parse_mode='Markdown')
+        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید ساده 🪟** و **پرده زبرا 🦓** است.\n\n👇 جهت استعلام قیمت یکی از موارد زیر را انتخاب کنید:"
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("محاسبه قیمت پرده زبرا 🦓", callback_data="select_پرده زبرا")],
+            [InlineKeyboardButton("محاسبه قیمت پرده شید ساده 🪟", callback_data="select_پرده شید ساده")],
+            [InlineKeyboardButton("محاسبه سایر پرده‌ها 🧮", callback_data="start_inquiry")]
+        ])
+    await query.message.reply_text(msg, reply_markup=buttons, parse_mode='Markdown')
 
 async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
