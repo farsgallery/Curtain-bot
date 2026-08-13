@@ -33,7 +33,7 @@ WEBHOOK_URL = os.environ.get("https://farsgallery-bot.onrender.com")      # مث
 PORT = int(os.environ.get("PORT", "10000"))      # Render پیش‌فرض 10000
 
 if not TOKEN:
-    raise ValueError("8737297309:AAGOejgXoxwlGjG2PdcGxkYtzOWJMNPtZA4")
+    raise ValueError("8737297309:AAGcH5LLdjnJB49V2r76cpnxE8qxYcVIz9o")
 
 # ---------------- محصولات ----------------
 PRODUCTS = {
