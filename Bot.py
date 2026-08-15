@@ -5,7 +5,7 @@ import jdatetime
 import http.server
 import socketserver
 import threading
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, 
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
@@ -248,18 +248,18 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
+        # بولد و درشت کردن بخش قیمت نهایی
         result_msg = (
             f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
             f"📐 عرض: {int(width)} سانتی‌متر | ارتفاع: {int(height)} سانتی‌متر\n"
             f"🧮 متراژ: {calc_area:.2f} متر مربع\n"
             f"{rules_text}"
-            f"🪙 قیمت هر متر: {unit_price:,} تومان\n"
-            f"💵 **قیمت نهایی: {total_price:,} تومان**\n"
+            f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
+            f"💵 **قیمت نهایی: {total_price:,} تومان**\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
         )
 
-        # دکمه‌های شیشه‌ای دو ستونه بخش استعلام قیمت
         inline_kb = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}"),
@@ -465,6 +465,27 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
+# --- ارسال آلبومی تصاویر نمونه‌کار ---
+
+async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    p_name = query.data.replace("port_", "")
+    imgs = PORTFOLIO_IMAGES.get(p_name, [])
+    if not imgs:
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
+        return
+    
+    # گروه بندی و ساخت آلبوم تصویر (Media Group)
+    media_group = []
+    for i, img_id in enumerate(imgs):
+        if i == 0:
+            media_group.append(InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}"))
+        else:
+            media_group.append(InputMediaPhoto(media=img_id))
+
+    await update.effective_chat.send_media_group(media=media_group)
+
 # --- سایر متدها ---
 
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -510,18 +531,6 @@ async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")]
     ])
     await update.message.reply_text("🖼 نمونه کار کدام محصول را می‌خواهید مشاهده کنید؟", reply_markup=kb)
-
-async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    p_name = query.data.replace("port_", "")
-    imgs = PORTFOLIO_IMAGES.get(p_name, [])
-    if not imgs:
-        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
-        return
-    await query.message.reply_text(f"📸 نمونه کارهای {p_name}:")
-    for img in imgs:
-        await query.message.reply_photo(photo=img)
 
 async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
