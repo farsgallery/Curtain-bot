@@ -32,26 +32,12 @@ PRICES = {
 
 USER_LIST = set()
 
-# فایل آیدی‌های عکس نمونه‌کارها
+# فایل آیدی‌های عکس نمونه‌کارها (کدهای دریافت شده را اینجا جایگزین کنید)
 PORTFOLIO_IMAGES = {
-    'پرده زبرا': [
-        "AgACAgQAAxkBAAEtmJlqgCmUbLw5_csGv7L8UfVjVUBoWAACaA9rG9NzAVBqkl0AAcXZFhABAAMCAANzAAM9BA",
-        "AgACAgQAAxkBAAEtmJpqgCmUVIWKnd-6KOE7hheaGxkImAACaQ9rG9NzAVBEfqOdUwcPnQEAAwIAA3MAAz0E",
-        "AgACAgQAAxkBAAEtmJFqgCkAAQ8jZLVHS_q_tj3Fla_J5T4AAmcPaxvTcwFQ2mjLqg6qigABAQADAgADcwADPQQ"
-    ],
-    'پرده کرکره فلزی': [
-        "AgACAgQAAxkBAAEtmKpqgCph8XDDG_YpDhOypP2n5YVbwQACag9rG9NzAVCqQrY1alb51wEAAwIAA3MAAz0E",
-        "AgACAgQAAxkBAAEtmKtqgCphh8M91vPDYoeHPC1ojRrP4QACaw9rG9NzAVBc9rh_SUgXTAEAAwIAA3MAAz0E",
-        "AgACAgQAAxkBAAEtmKxqgCph5t4ohpnppTjTxVklsp2CKAACbA9rG9NzAVCK9pgTi2SqpQEAAwIAA3MAAz0E"
-    ],
-    'پرده شید ساده': [
-        "AgACAgQAAxkBAAEtmLRqgCqpLhmcP4dW8shq9QiQSZirkQACbg9rG9NzAVD7v-6WQ0DgEAEAAwIAA3MAAz0E",
-        "AgACAgQAAxkBAAEtmLVqgCqpCeLv6rgK7cGMAQhXYB_PmwACcA9rG9NzAVAaYLVQ4VXDawEAAwIAA3MAAz0E",
-        "AgACAgQAAxkBAAEtmLZqgCqpd9jR2ybwcolm807VcgdKtAACbw9rG9NzAVDytwdRvO5kNQEAAwIAA3MAAz0E"
-    ],
-    'پرده شید بلک اوت': [
-        "AgACAgQAAxkBAAEtmLxqgCri4YNLuEX-LTEtm5wZtVqlJQACcQ9rG9NzAVCSymPBmt2onQEAAwIAA3kAAz0E"
-    ]
+    'پرده زبرا': [],
+    'پرده کرکره فلزی': [],
+    'پرده شید ساده': [],
+    'پرده شید بلک اوت': []
 }
 
 # --- وب‌سرور مجازی Render ---
@@ -93,6 +79,25 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
     except Exception as e:
         logging.error(f"Error checking channel membership: {e}")
         return True
+
+# --- دریافت و استخراج File ID مخصوص ادمین ---
+async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+    elif update.message.document and update.message.document.mime_type.startswith('image/'):
+        file_id = update.message.document.file_id
+    else:
+        return
+
+    text = (
+        "📸 **فایل آیدی دریافت شد:**\n\n"
+        f"`{file_id}`\n\n"
+        "📌 *کد بالا را کپی کرده و در بخش PORTFOLIO_IMAGES کد قرار دهید.*"
+    )
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def send_join_channel_message(update: Update):
     keyboard = InlineKeyboardMarkup([
@@ -316,6 +321,9 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     p_name = query.data.replace("port_", "")
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
+    if not imgs:
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای **{p_name}** در سیستم ثبت نشده است.", parse_mode='Markdown')
+        return
     await query.message.reply_text(f"📸 **نمونه کارهای {p_name}:**", parse_mode='Markdown')
     for img in imgs:
         await query.message.reply_photo(photo=img)
@@ -438,7 +446,6 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# دکمه‌های منوی ثابت اصلی
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🏢 اداری و تجاری", callback_data="sugg_office")],
@@ -476,7 +483,6 @@ async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg)
     return ConversationHandler.END
 
-# --- تابع لغو مکالمه همراه با نمایش منوی شیشه‌ای ---
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
@@ -535,6 +541,10 @@ def main():
 
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
+    
+    # هندلر جدید دریافت عکس جهت گرفتن File ID (فقط ادمین)
+    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_photo_file_id))
+
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
     app.add_handler(admin_conv)
