@@ -11,9 +11,9 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
 )
 
-# --- آیدی مدیریت و تنظیمات ---
-ADMIN_ID = 265825395  # آیدی مدیریت
-ADMIN_USERNAME = "@irdglry"
+# --- تنظیمات مدیریت و کانال ---
+ADMIN_ID = 333050909  
+ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
 
 PRODUCT_LINKS = {
@@ -23,7 +23,6 @@ PRODUCT_LINKS = {
     'پرده کرکره فلزی': 'https://farsgallery.com/product-category/curtains/cercere/'
 }
 
-# قیمت‌های قابل ویرایش از پنل مدیریت
 PRICES = {
     'پرده شید ساده': 1980000,
     'پرده شید بلک اوت': 3350000,
@@ -33,11 +32,26 @@ PRICES = {
 
 USER_LIST = set()
 
+# فایل آیدی‌های عکس نمونه‌کارها
 PORTFOLIO_IMAGES = {
-    'پرده زبرا': ['https://s6.uupload.ir/files/zebra1_123.jpg'],
-    'پرده شید ساده': ['https://s6.uupload.ir/files/shid1_123.jpg'],
-    'پرده شید بلک اوت': ['https://s6.uupload.ir/files/blackout1_123.jpg'],
-    'پرده کرکره فلزی': ['https://s6.uupload.ir/files/kerkere1_123.jpg']
+    'پرده زبرا': [
+        "AgACAgQAAxkBAAEtmJlqgCmUbLw5_csGv7L8UfVjVUBoWAACaA9rG9NzAVBqkl0AAcXZFhABAAMCAANzAAM9BA",
+        "AgACAgQAAxkBAAEtmJpqgCmUVIWKnd-6KOE7hheaGxkImAACaQ9rG9NzAVBEfqOdUwcPnQEAAwIAA3MAAz0E",
+        "AgACAgQAAxkBAAEtmJFqgCkAAQ8jZLVHS_q_tj3Fla_J5T4AAmcPaxvTcwFQ2mjLqg6qigABAQADAgADcwADPQQ"
+    ],
+    'پرده کرکره فلزی': [
+        "AgACAgQAAxkBAAEtmKpqgCph8XDDG_YpDhOypP2n5YVbwQACag9rG9NzAVCqQrY1alb51wEAAwIAA3MAAz0E",
+        "AgACAgQAAxkBAAEtmKtqgCphh8M91vPDYoeHPC1ojRrP4QACaw9rG9NzAVBc9rh_SUgXTAEAAwIAA3MAAz0E",
+        "AgACAgQAAxkBAAEtmKxqgCph5t4ohpnppTjTxVklsp2CKAACbA9rG9NzAVCK9pgTi2SqpQEAAwIAA3MAAz0E"
+    ],
+    'پرده شید ساده': [
+        "AgACAgQAAxkBAAEtmLRqgCqpLhmcP4dW8shq9QiQSZirkQACbg9rG9NzAVD7v-6WQ0DgEAEAAwIAA3MAAz0E",
+        "AgACAgQAAxkBAAEtmLVqgCqpCeLv6rgK7cGMAQhXYB_PmwACcA9rG9NzAVAaYLVQ4VXDawEAAwIAA3MAAz0E",
+        "AgACAgQAAxkBAAEtmLZqgCqpd9jR2ybwcolm807VcgdKtAACbw9rG9NzAVDytwdRvO5kNQEAAwIAA3MAAz0E"
+    ],
+    'پرده شید بلک اوت': [
+        "AgACAgQAAxkBAAEtmLxqgCri4YNLuEX-LTEtm5wZtVqlJQACcQ9rG9NzAVCSymPBmt2onQEAAwIAA3kAAz0E"
+    ]
 }
 
 # --- وب‌سرور مجازی Render ---
@@ -59,7 +73,7 @@ GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS = range(2, 6)
 SET_PR_VAL = 6
 
-# --- منوی اصلی (تنها تغییر: اضافه شدن گزینه‌های وورد به منوی قبلی) ---
+# --- منوی اصلی ---
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['راهنمایی و پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
@@ -101,12 +115,11 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     ])
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "✨ می‌توانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید.\n\n"
-        "👇 یکی از گزینه ها را انتخاب کنید:"
+        "✨ می‌توانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید."
     )
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
-        await update.message.reply_text("👇 انتخاب کنید:", reply_markup=inline_kb)
+        await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
     elif update.callback_query:
         await update.callback_query.message.reply_text(welcome_msg, reply_markup=inline_kb)
 
@@ -157,7 +170,7 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     }
     context.user_data['curtain_icon'] = icon_map.get(curtain_type, curtain_type)
 
-    await query.message.reply_text(f"لطفاً **عرض** پرده را به **سانتی‌متر** وارد کنید (مثال: 150):", parse_mode='Markdown')
+    await query.message.reply_text("لطفاً **عرض** پرده را به **سانتی‌متر** وارد کنید (مثال: 150):", parse_mode='Markdown')
     return GET_WIDTH
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -180,10 +193,9 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         curtain_icon = context.user_data['curtain_icon']
         
         unit_price = PRICES.get(curtain_type, 2000000)
-        min_height, min_area = 0, 0
         rules_applied = []
 
-        if curtain_type == 'پرده شید ساده' or curtain_type == 'پرده شید بلک اوت':
+        if curtain_type in ['پرده شید ساده', 'پرده شید بلک اوت']:
             min_height, min_area = 200, 2.0
             calc_height = max(height, min_height)
             if height < min_height:
@@ -236,7 +248,11 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}")],
-            [InlineKeyboardButton("میخوای خرید کنی؟ 🛒", url=buy_url)],
+            [InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")],
+            [InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")],
+            [InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data="show_measure_info")],
+            [InlineKeyboardButton("ثبت سفارش در تلگرام یا مشاوره 📝", callback_data="start_direct_order_cb")],
+            [InlineKeyboardButton("میخوای خرید آنلاین کنی؟ 🛒", url=buy_url)],
             [InlineKeyboardButton("شروع دوباره 🔄", callback_data="start_inquiry")]
         ])
 
@@ -267,7 +283,7 @@ async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 async def color_selected_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("رنگ انتخاب شد!")
-    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از طریق منوی اصلی روی دکمه ثبت سفارش کلیک کنید.")
+    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از دکمه «ثبت سفارش در تلگرام یا مشاوره» استفاده کنید.")
 
 async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -286,13 +302,12 @@ async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     await query.message.reply_text(msg, parse_mode='Markdown', disable_web_page_preview=True)
 
-# --- گزینه‌های اضافه شده از فایل وورد (بدون تغییر ساختار اصلی) ---
 async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("پرده زبرا", callback_data="port_پرده زبرا")],
-        [InlineKeyboardButton("پرده شید ساده", callback_data="port_پرده شید ساده")],
-        [InlineKeyboardButton("پرده شید بلک اوت", callback_data="port_پرده شید بلک اوت")],
-        [InlineKeyboardButton("پرده کرکره فلزی", callback_data="port_پرده کرکره فلزی")]
+        [InlineKeyboardButton("پرده زبرا 🦓", callback_data="port_پرده زبرا")],
+        [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="port_پرده شید ساده")],
+        [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")],
+        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")]
     ])
     await update.message.reply_text("🖼 نمونه کار کدام محصول را می‌خواهید مشاهده کنید؟", reply_markup=kb)
 
@@ -306,8 +321,14 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_photo(photo=img)
 
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📝 جهت ثبت سفارش مستقیم یا مشاوره تلفنی، لطفاً **نام و نام خانوادگی** خود را وارد کنید:")
+    msg_target = update.message or update.callback_query.message
+    await msg_target.reply_text("📝 جهت ثبت سفارش مستقیم یا مشاوره تلفنی، لطفاً **نام و نام خانوادگی** خود را وارد کنید:")
     return ORD_NAME
+
+async def start_direct_order_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    return await start_direct_order(update, context)
 
 async def get_ord_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_name'] = update.message.text
@@ -339,28 +360,34 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_target = update.message or update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
     text = (
         "🚚 **محاسبه هزینه نصب، اندازه‌گیری و ارسال:**\n\n"
-        "📏 **هزینه اندازه‌گیری (شیراز):** 500,000 تومان[cite: 1]\n"
-        "🛠 **هزینه نصب:** هر درگاه 500,000 تومان (پنجره تک‌تکه = ۱ درگاه)[cite: 1]\n"
-        "🚕 **کرایه حمل (شیراز):** 150,000 تومان[cite: 1]\n"
-        "📦 **ارسال به سایر شهرها:** بسته‌بندی مقاوم و ارسال با تیپاکس (پس‌کرایه)[cite: 1]\n\n"
-        "📞 جهت هماهنگی نصب در شهرستان‌ها تماس بگیرید.[cite: 1]"
+        "📏 **هزینه اندازه‌گیری (شیراز):** 500,000 تومان\n"
+        "🛠 **هزینه نصب:** هر درگاه 500,000 تومان (پنجره تک‌تکه = ۱ درگاه)\n"
+        "🚕 **کرایه حمل (شیراز):** 150,000 تومان\n"
+        "📦 **ارسال به سایر شهرها:** بسته‌بندی مقاوم و ارسال با تیپاکس (پس‌کرایه)\n\n"
+        "📞 جهت هماهنگی نصب در شهرستان‌ها تماس بگیرید."
     )
-    await update.message.reply_text(text, parse_mode='Markdown')
+    await msg_target.reply_text(text, parse_mode='Markdown')
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_target = update.message or update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
     guide_text = (
         "📐 **آموزش جامع اندازه‌گیری پرده:**\n\n"
         "1️⃣ **خارج از چهارچوب (روکار):**\n"
-        "• **عرض:** عرض پنجره + ۱۵ سانتی‌متر[cite: 1]\n"
-        "• **ارتفاع:** ارتفاع پنجره + ۲۰ سانتی‌متر[cite: 1]\n\n"
+        "• **عرض:** عرض پنجره + ۱۵ سانتی‌متر\n"
+        "• **ارتفاع:** ارتفاع پنجره + ۲۰ سانتی‌متر\n\n"
         "2️⃣ **داخل چهارچوب (توکار):**\n"
-        "• **عرض:** عرض کامل چهارچوب منفی ۱ سانتی‌متر[cite: 1]\n"
-        "• **ارتفاع:** ارتفاع کامل چهارچوب + ۲۰ سانتی‌متر[cite: 1]\n\n"
-        "📌 *توصیه می‌شود حتماً از متر فلزی استفاده کنید.*[cite: 1]"
+        "• **عرض:** عرض کامل چهارچوب منفی ۱ سانتی‌متر\n"
+        "• **ارتفاع:** ارتفاع کامل چهارچوب + ۲۰ سانتی‌متر\n\n"
+        "📌 **توصیه می‌شود حتماً از متر فلزی استفاده کنید.**"
     )
-    await update.message.reply_text(guide_text, parse_mode='Markdown')
+    await msg_target.reply_text(guide_text, parse_mode='Markdown')
 
 # --- پنل مدیریت اختصاصی (/admin) ---
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -371,7 +398,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💵 تغییر قیمت محصولات", callback_data="admin_change_price")],
         [InlineKeyboardButton("👥 لیست آیدی کاربران", callback_data="admin_users")]
     ])
-    await update.message.reply_text("⚙️ **پنل مدیریت فارس گالری:**[cite: 1]", reply_markup=kb, parse_mode='Markdown')
+    await update.message.reply_text("⚙️ **پنل مدیریت فارس گالری:**", reply_markup=kb, parse_mode='Markdown')
 
 async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -380,25 +407,25 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "admin_stats":
-        await query.message.reply_text(f"📊 **تعداد کل کاربران:** {len(USER_LIST)} نفر[cite: 1]")
+        await query.message.reply_text(f"📊 **تعداد کل کاربران:** {len(USER_LIST)} نفر")
     elif query.data == "admin_users":
         users_str = "\n".join([str(u) for u in USER_LIST])
-        await query.message.reply_text(f"👥 **آیدی کاربران:**\n\n{users_str}[cite: 1]")
+        await query.message.reply_text(f"👥 **آیدی کاربران:**\n\n{users_str}")
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("پرده شید ساده", callback_data="setp_پرده شید ساده")],
-            [InlineKeyboardButton("پرده شید بلک اوت", callback_data="setp_پرده شید بلک اوت")],
-            [InlineKeyboardButton("پرده زبرا", callback_data="setp_پرده زبرا")],
-            [InlineKeyboardButton("پرده کرکره فلزی", callback_data="setp_پرده کرکره فلزی")]
+            [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="setp_پرده شید ساده")],
+            [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="setp_پرده شید بلک اوت")],
+            [InlineKeyboardButton("پرده زبرا 🦓", callback_data="setp_پرده زبرا")],
+            [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="setp_پرده کرکره فلزی")]
         ])
-        await query.message.reply_text("کدام محصول را جهت تغییر قیمت انتخاب می‌کنید؟[cite: 1]", reply_markup=kb)
+        await query.message.reply_text("کدام محصول را جهت تغییر قیمت انتخاب می‌کنید؟", reply_markup=kb)
 
 async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     p_name = query.data.replace("setp_", "")
     context.user_data['editing_product'] = p_name
-    await query.message.reply_text(f"قیمت جدید **{p_name}** را به تومان وارد کنید:[cite: 1]", parse_mode='Markdown')
+    await query.message.reply_text(f"قیمت جدید **{p_name}** را به تومان وارد کنید:", parse_mode='Markdown')
     return SET_PR_VAL
 
 async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -406,7 +433,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         new_val = int(update.message.text)
         PRICES[p_name] = new_val
-        await update.message.reply_text(f"✅ قیمت **{p_name}** با موفقیت به {new_val:,} تومان تغییر یافت.[cite: 1]", parse_mode='Markdown')
+        await update.message.reply_text(f"✅ قیمت **{p_name}** با موفقیت به {new_val:,} تومان تغییر یافت.", parse_mode='Markdown')
     except ValueError:
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
@@ -449,8 +476,14 @@ async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg)
     return ConversationHandler.END
 
+# --- تابع لغو مکالمه همراه با نمایش منوی شیشه‌ای ---
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("عمل لغو شد.", reply_markup=PERSISTENT_KEYBOARD)
+    inline_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
+        [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش انجام بدم", callback_data="start_order")]
+    ])
+    await update.message.reply_text("❌ **دستور لغو شد.**", parse_mode='Markdown')
+    await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
     return ConversationHandler.END
 
 def main():
@@ -458,35 +491,46 @@ def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
+    MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|محاسبه هزینه نصب و ارسال 🚚)$'
+
     price_conv_handler = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(select_curtain_callback, pattern="^select_")
         ],
         states={
-            GET_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex('^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|محاسبه هزینه نصب و ارسال 🚚)$'), get_width)],
-            GET_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex('^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|محاسبه هزینه نصب و ارسال 🚚)$'), get_height)]
+            GET_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_width)],
+            GET_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_height)]
         },
         fallbacks=[
-            MessageHandler(filters.Regex('^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|محاسبه هزینه نصب و ارسال 🚚)$'), cancel),
+            MessageHandler(filters.Regex(MENU_REGEX), cancel),
             CommandHandler('cancel', cancel)
         ]
     )
 
     direct_order_conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex('^ثبت سفارش و مشاوره مستقیم 📝$'), start_direct_order)],
+        entry_points=[
+            MessageHandler(filters.Regex('^ثبت سفارش و مشاوره مستقیم 📝$'), start_direct_order),
+            CallbackQueryHandler(start_direct_order_cb, pattern="^start_direct_order_cb$")
+        ],
         states={
-            ORD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_ord_name)],
-            ORD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_ord_phone)],
-            ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_ord_type)],
-            ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_ord_address)],
+            ORD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_name)],
+            ORD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_phone)],
+            ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_type)],
+            ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_address)],
         },
-        fallbacks=[CommandHandler('cancel', cancel)]
+        fallbacks=[
+            MessageHandler(filters.Regex(MENU_REGEX), cancel),
+            CommandHandler('cancel', cancel)
+        ]
     )
 
     admin_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(select_price_to_change, pattern="^setp_")],
-        states={SET_PR_VAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_new_price)]},
-        fallbacks=[CommandHandler('cancel', cancel)]
+        states={SET_PR_VAL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), save_new_price)]},
+        fallbacks=[
+            MessageHandler(filters.Regex(MENU_REGEX), cancel),
+            CommandHandler('cancel', cancel)
+        ]
     )
 
     app.add_handler(CommandHandler('start', start_command))
@@ -512,6 +556,8 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_suggestion_callback, pattern="^sugg_"))
     app.add_handler(CallbackQueryHandler(show_colors_callback, pattern="^colors_"))
     app.add_handler(CallbackQueryHandler(color_selected_callback, pattern="^color_selected$"))
+    app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
+    app.add_handler(CallbackQueryHandler(show_measurement_guide, pattern="^show_measure_info$"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
 
