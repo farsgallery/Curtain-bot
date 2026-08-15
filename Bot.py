@@ -11,7 +11,6 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
 )
 
-# --- تنظیمات مدیریت و کانال ---
 ADMIN_ID = 333050909  
 ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
@@ -248,7 +247,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
-        # بولد و درشت کردن بخش قیمت نهایی
         result_msg = (
             f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
@@ -266,7 +264,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
             ],
             [
-                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"show_measure_{curtain_type}"),
+                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"mtype_{curtain_type}"),
                 InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")
             ],
             [
@@ -293,6 +291,97 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
+
+# --- سیستم آموزش اندازه‌گیری بر اساس تفکیک ۲ دکمه ---
+
+async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_target = update.message or update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("زبرا / شید / بلک‌اوت 🪟", callback_data="mtype_zebra_shid")],
+        [InlineKeyboardButton("کرکره فلزی 🏢", callback_data="mtype_kerkere")]
+    ])
+    await msg_target.reply_text("📐 قصد اندازه‌گیری چه نوع پرده‌ای را دارید؟", reply_markup=kb)
+
+async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    raw_type = query.data.replace("mtype_", "")
+    
+    if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا", "پرده زبرا و شید"]:
+        ctype = "zebra_shid"
+        label = "زبرا / شید / بلک‌اوت"
+    else:
+        ctype = "kerkere"
+        label = "کرکره فلزی"
+        
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("داخل چهارچوب (توکار) 🚪", callback_data=f"mpos_{ctype}_inside")],
+        [InlineKeyboardButton("خارج چهارچوب (روکار) 🖼", callback_data=f"mpos_{ctype}_outside")]
+    ])
+    await query.message.reply_text(f"نصب {label} شما به چه صورت است؟", reply_markup=kb)
+
+async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    data_parts = query.data.replace("mpos_", "").split("_")
+    ctype = data_parts[0]
+    pos = data_parts[1]
+
+    tools_text = (
+        "🛠 **انتخاب وسیله اندازه‌گیری:**\n"
+        "مترهای نواری فلزی بهترین وسیله برای اندازه‌گیری هستند. این نوارها قابلیت اندازه‌گیری دقیق سانتی‌متر و حتی میلی‌متری را دارند و امکان خطای اندازه‌گیری را کاهش می‌دهند. "
+        "نوارهای پارچه‌ای و مترهای خیاطی برای اندازه‌گیری پرده‌های پنجره مناسب نیستند و ممکن است اندکی خطا در اثر کشش ایجاد کنند.\n\n"
+    )
+
+    if ctype == "zebra_shid":
+        notes = (
+            "📌 **نکات مهم آماده‌سازی پرده زبرا و شید:**\n"
+            "۱. پرده‌های زبرا به دلیل مکانیزم بالابر نیاز به محاسبة خاصی دارند. شما باید این نکته را در نظر داشته باشید که پارچة پرده زبرا از هر طرف ۱.۵ سانتی‌متر از قاب کوچکتر است. برای مثال اگر عرض پرده مورد نیاز شما ۱۰۰ سانتی‌متر باشد، قاب پرده ۱۰۰ سانتی‌متر خواهد بود و پارچة پرده ۹۷ سانتی‌متر است.\n"
+            "۲. قاب بالای پرده‌های زبرا و شید حدود ۱۰ سانتی‌متر فضا نیاز دارد. اندازه قاب پرده از آن جهت اهمیت دارد که شما باید بالای پنجره خود حداقل ۱۰ سانتی‌متر فضا داشته باشید تا هنگام باز کردن پنجره محدودیتی نداشته باشید.\n\n"
+        )
+        if pos == "inside":
+            detail = (
+                "📏 **آموزش اندازه‌گیری داخل چهارچوب (زبرا / شید / بلک‌اوت):**\n"
+                "۱. ابتدا لوازم لازم چون خودکار، کاغذ و متر فلزی را آماده کنید.\n"
+                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه نوبت (بالا، وسط و پایین) اندازه‌گیری کرده و **کوچک‌ترین عرض** را یادداشت کنید. سپس حداقل **یک سانتی‌متر** برای اطمینان از قرار گرفتن قاب در چهارچوب از عرض پرده کم کنید.\n"
+                "۳. بعد از اندازه‌گیری عرض، ارتفاع را اندازه‌گیری کرده و **بیست سانتی‌متر** اضافه کنید."
+            )
+        else:
+            detail = (
+                "📏 **آموزش اندازه‌گیری خارج چهارچوب (زبرا / شید / بلک‌اوت):**\n"
+                "۱. ابتدا یک کاغذ، خودکار و متر برای اندازه‌گیری آماده کنید.\n"
+                "۲. عرض پنجره را اندازه‌گیری کنید و برای اینکه پرده به صورت کامل پنجره را بپوشاند، **پانزده سانتی‌متر** به عرض اندازه‌گیری شده اضافه کنید.\n"
+                "۳. بعد از اندازه‌گیری عرض، ارتفاع را اندازه‌گیری کرده و **بیست سانتی‌متر** به ارتفاع اضافه کنید تا از پوشش کامل پنجره اطمینان داشته باشید.\n"
+                "*(نکته: در صورتی که فضای بالای پنجره خارج چارچوب باشد و پایین پنجره خالی باشد، حداقل ۵ سانتی‌متر نیز به پایین پنجره اضافه می‌شود)*"
+            )
+        final_msg = tools_text + notes + detail
+
+    else: # kerkere
+        if pos == "inside":
+            detail = (
+                "📏 **آموزش اندازه‌گیری داخل چهارچوب / توکار (کرکره فلزی):**\n"
+                "۱. ابتدا دقت کنید در این حالت به دلیل نیاز به نصب پایه پرده به بالای درگاه پنجره، از استحکام این قسمت از دیوار جهت انجام سوراخ‌کاری با دریل برای پیچ کردن پایه‌ها مطمئن شوید.\n"
+                "۲. عرض و ارتفاع پنجره را در سه جا اندازه‌گیری کنید (چپ، وسط، راست برای ارتفاع و بالا، وسط، پایین برای عرض) و مبنا را **عدد کوچک‌تر** بگیرید.\n"
+                "۳. از مقدار عرض **۱ سانتی‌متر** جهت جا شدن پرده کم کنید و به ارتفاع **۵ سانتی‌متر** اضافه کنید تا پرده کف پنجره قرار گیرد.\n"
+                "۴. به جهت بازشو پنجره و جهت قرارگیری زنجیر بازشوی پرده دقت کنید؛ طناب و میله خلاف بازشو و سمت قسمت ثابت پنجره قرار می‌گیرد.\n\n"
+                "⚠️ *نکات:* ممکن است قاب پنجره دیده شود. دقت کنید دستگیره پنجره به پرده گیر نکند."
+            )
+        else:
+            detail = (
+                "📏 **آموزش اندازه‌گیری خارج چهارچوب / روکار (کرکره فلزی):**\n"
+                "۱. همانند روش قبلی عرض و ارتفاع پنجره را در سه جا اندازه‌گیری کرده و مبنا را **عدد کوچک‌تر** بگیرید.\n"
+                "۲. **در عرض پرده:** جهت جلوگیری از عبور نور از کنار پرده در چپ یا راست، حداقل از هر طرف ۵ سانتی‌متر (در مجموع **۱۰ سانتی‌متر**) اضافه کنید.\n"
+                "۳. **در ارتفاع پرده:** اگر مانعی در پایین پرده مثل رادیاتور، پیشخوان یا کابینت قرار ندارد، جهت همپوشانی در حالت سایه و نیمه‌سایه حتماً **۲۰ سانتی‌متر** به ارتفاع اضافه کنید.\n"
+                "۴. فاصله بالای پرده (محل نصب پایه) باید به اندازه کافی جهت سوراخ‌کاری باشد. در این حالت می‌توانید پرده را به صورت دیواری یا سقفی نصب کنید."
+            )
+        final_msg = tools_text + detail
+
+    await query.message.reply_text(final_msg, parse_mode='Markdown')
 
 # --- ثبت سفارش ---
 
@@ -476,7 +565,6 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
         return
     
-    # گروه بندی و ساخت آلبوم تصویر (Media Group)
     media_group = []
     for i, img_id in enumerate(imgs):
         if i == 0:
@@ -544,20 +632,6 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
     )
     await msg_target.reply_text(text)
-
-async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg_target = update.message or update.callback_query.message
-    curtain_type = "پرده"
-    if update.callback_query and update.callback_query.data.startswith("show_measure_"):
-        curtain_type = update.callback_query.data.replace("show_measure_", "")
-        await update.callback_query.answer()
-
-    guide_text = (
-        f"📐 آموزش اندازه‌گیری {curtain_type}:\n\n"
-        "1️⃣ خارج از چهارچوب: عرض + ۱۵ سانتی‌متر | ارتفاع + ۲۰ سانتی‌متر\n"
-        "2️⃣ داخل چهارچوب: عرض منفی ۱ سانتی‌متر | ارتفاع + ۲۰ سانتی‌متر"
-    )
-    await msg_target.reply_text(guide_text)
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
@@ -683,7 +757,8 @@ def main():
     app.add_handler(CallbackQueryHandler(show_colors_callback, pattern="^colors_"))
     app.add_handler(CallbackQueryHandler(color_selected_callback, pattern="^color_selected$"))
     app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
-    app.add_handler(CallbackQueryHandler(show_measurement_guide, pattern="^show_measure_"))
+    app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mtype_"))
+    app.add_handler(CallbackQueryHandler(handle_mpos_selection, pattern="^mpos_"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
 
