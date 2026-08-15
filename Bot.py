@@ -32,12 +32,26 @@ PRICES = {
 
 USER_LIST = set()
 
-# فایل آیدی‌های عکس نمونه‌کارها (کدهای دریافت شده را اینجا جایگزین کنید)
+# فایل آیدی‌های به‌روزرسانی شده
 PORTFOLIO_IMAGES = {
-    'پرده زبرا': [],
-    'پرده کرکره فلزی': [],
-    'پرده شید ساده': [],
-    'پرده شید بلک اوت': []
+    'پرده زبرا': [
+        "AgACAgQAAxkBAAINgmqAN9MBBfL-fATjGc0bAvKXqcwkAAIHEGsbKiQBUD_cumH9NZmpAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINg2qAN9M86Ch402OO3kv9dngq5utnAAIIEGsbKiQBUDOPifTSJATYAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINhGqAN9MufbDbySYx6hiDtQheDuTbAAIJEGsbKiQBUNTZcyys1KRDAQADAgADeQADPQQ"
+    ],
+    'پرده کرکره فلزی': [
+        "AgACAgQAAxkBAAINiGqAOB48r5f99pD3JAoT3IJ4YA-FAAINEGsbKiQBUKYBX3ntTJLPAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINiWqAOB78ixk8x7bWq2mT0Az0mZZXAAIOEGsbKiQBUK8hQZZmc8J4AQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINimqAOB6Dw-IGQRft6PAnxfuXvXHYAAJsD2sb03MBUG8XGvaJAbRPAQADAgADeQADPQQ"
+    ],
+    'پرده شید ساده': [
+        "AgACAgQAAxkBAAINjmqAOGeyv2OWNrt-3xAffcH-IgxPAAIQEGsbKiQBUHsdkKQY4gXPAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINj2qAOGe9JfdiH_qXeNihXAFeXHB1AAJwD2sb03MBUHsa4Jyg84PeAQADAgADeQADPQQ",
+        "AgACAgQAAxkBAAINkmqAOJe30jXWZERkxzIpnIbswDZNAAIREGsbKiQBUAkolxQ5GHJNAQADAgADeQADPQQ"
+    ],
+    'پرده شید بلک اوت': [
+        "AgACAgQAAxkBAAINgGqAN4xO0CG4N5YJ__6hjPGfSrDJAAIGEGsbKiQBUFBGGh9u51EmAQADAgADeQADPQQ"
+    ]
 }
 
 # --- وب‌سرور مجازی Render ---
@@ -542,7 +556,7 @@ def main():
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
     
-    # هندلر جدید دریافت عکس جهت گرفتن File ID (فقط ادمین)
+    # دریافت عکس ادمین جهت استخراج File ID
     app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_photo_file_id))
 
     app.add_handler(price_conv_handler)
