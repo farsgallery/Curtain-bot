@@ -292,7 +292,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
-# --- سیستم آموزش اندازه‌گیری بر اساس تفکیک ۲ دکمه ---
+# --- سیستم آموزش اندازه‌گیری ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -574,6 +574,33 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.effective_chat.send_media_group(media=media_group)
 
+# --- راهنمایی و پیشنهاد نوع پرده (به‌روزرسانی شده) ---
+
+async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏢 اداری و تجاری", callback_data="sugg_office")],
+        [InlineKeyboardButton("🏠 مسکونی", callback_data="sugg_home")]
+    ])
+    await update.message.reply_text("برای چه کاربردی پرده نیاز دارید؟ 🧐", reply_markup=keyboard)
+
+async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'sugg_office':
+        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است."
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری کرکره فلزی", callback_data="select_پرده کرکره فلزی")]
+        ])
+    else:
+        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید 🪟** یا **پرده زبرا 🦓** است."
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده زبرا", callback_data="select_پرده زبرا")],
+            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده شید ساده", callback_data="select_پرده شید ساده")]
+        ])
+        
+    await query.message.reply_text(msg, reply_markup=kb, parse_mode='Markdown')
+
 # --- سایر متدها ---
 
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -632,23 +659,6 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
     )
     await msg_target.reply_text(text)
-
-async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏢 اداری و تجاری", callback_data="sugg_office")],
-        [InlineKeyboardButton("🏠 مسکونی", callback_data="sugg_home")]
-    ])
-    await update.message.reply_text("برای چه کاربردی پرده نیاز دارید؟ 🧐", reply_markup=keyboard)
-
-async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    if query.data == 'sugg_office':
-        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: پرده کرکره فلزی 🏢 است."
-    else:
-        msg = "پیشنهاد ما برای محیط‌های مسکونی: پرده شید ساده 🪟 یا پرده زبرا 🦓 است."
-    await query.message.reply_text(msg)
 
 async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
