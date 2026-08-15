@@ -119,20 +119,6 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Failed to send follow-up message to {user_id}: {e}")
 
-async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-    
-    if update.message.photo:
-        file_id = update.message.photo[-1].file_id
-    elif update.message.document and update.message.document.mime_type.startswith('image/'):
-        file_id = update.message.document.file_id
-    else:
-        return
-
-    text = f"📸 **فایل آیدی دریافت شد:**\n\n`{file_id}`"
-    await update.message.reply_text(text, parse_mode='Markdown')
-
 async def send_join_channel_message(update: Update):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
@@ -305,7 +291,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
-# --- سیستم جدید و هوشمند ثبت سفارش و ارسال آنی به ادمین ---
+# --- ثبت سفارش + مدیریت عکس کامل و دقیق ---
 
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -337,7 +323,7 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
-    # 1️⃣ ارسال آنی اطلاعات اولیه برای ادمین
+    # ارسال اطلاعات اولیه به ادمین
     admin_init_msg = (
         "📥 **سفارش / مشاوره جدید (مشخصات اولیه)**\n\n"
         f"👤 **نام:** {context.user_data.get('order_name')}\n"
@@ -348,7 +334,6 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await context.bot.send_message(chat_id=ADMIN_ID, text=admin_init_msg, parse_mode='Markdown')
 
-    # پیام موفقیت اولیه به مشتری
     photo_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("رد کردن این مرحله ⏩", callback_data="skip_photo")]
     ])
@@ -365,16 +350,22 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
+    caption_text = (
+        f"📸 **تصویر ارسال شده توسط مشتری**\n\n"
+        f"👤 **نام:** {context.user_data.get('order_name')}\n"
+        f"👤 **یوزرنیم مشتری:** {user_handle}"
+    )
+
+    # اگر عکس استاندارد فرستاد
     if update.message.photo:
         photo_file_id = update.message.photo[-1].file_id
-        # 2️⃣ ارسال عکس برای ادمین
-        caption_text = (
-            f"📸 **تصویر ارسال شده توسط مشتری**\n\n"
-            f"👤 **نام:** {context.user_data.get('order_name')}\n"
-            f"👤 **یوزرنیم مشتری:** {user_handle}"
-        )
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ **عکس با موفقیت دریافت شد.**")
+        await update.message.reply_text("✅ **عکس با موفقیت دریافت و برای کارشناس ارسال شد.**")
+    # اگر عکس را به صورت فایل فرستاد
+    elif update.message.document and update.message.document.mime_type.startswith('image/'):
+        doc_file_id = update.message.document.file_id
+        await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
+        await update.message.reply_text("✅ **عکس با موفقیت دریافت و برای کارشناس ارسال شد.**")
     
     return await ask_dimensions(update, context)
 
@@ -415,7 +406,7 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
-    # 3️⃣ ارسال تکمیلی ابعاد برای ادمین
+    # ارسال ابعاد به ادمین
     admin_dim_msg = (
         "📐 **ابعاد تکمیلی ثبت‌شده مشتری:**\n\n"
         f"👤 **نام:** {context.user_data.get('order_name')}\n"
@@ -425,7 +416,6 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await context.bot.send_message(chat_id=ADMIN_ID, text=admin_dim_msg, parse_mode='Markdown')
 
-    # پیام موفقیت ثبت ابعاد به مشتری
     await update.message.reply_text(
         "✅ **ابعاد و اندازه‌ها با موفقیت ثبت گردید.**\n\n"
         "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت.",
@@ -433,7 +423,7 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# --- سایر بخش‌های سیستم ---
+# --- سایر متدها ---
 
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -640,7 +630,7 @@ def main():
             ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_type)],
             ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_address)],
             ORD_PHOTO: [
-                MessageHandler(filters.PHOTO, get_ord_photo),
+                MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo),
                 CallbackQueryHandler(skip_ord_photo_cb, pattern="^skip_photo$")
             ],
             ORD_HAS_DIM: [
@@ -666,8 +656,6 @@ def main():
 
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
-    
-    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_photo_file_id))
 
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
