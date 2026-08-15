@@ -30,7 +30,6 @@ PRICES = {
     'پرده کرکره فلزی': 2970000
 }
 
-# ذخیره اطلاعات کاربران (آیدی و یوزرنیم)
 USER_LIST = {} 
 
 PORTFOLIO_IMAGES = {
@@ -90,7 +89,6 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
         logging.error(f"Error checking channel membership: {e}")
         return True
 
-# یادآوری دقیقاً پس از ۲۴ ساعت و به صورت یک‌باره
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
     user_id = job.chat_id
@@ -128,9 +126,13 @@ async def send_join_channel_message(update: Update):
 async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
-        [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش انجام بدم", callback_data="start_order")]
+        [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش مستقیم در سایت فارس گالری انجام بدم", callback_data="start_order")],
+        [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")]
     ])
-    welcome_msg = "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨"
+    welcome_msg = (
+        "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
+        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید."
+    )
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
         await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
@@ -246,38 +248,37 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
-        # کاهش فاصله خطوط برای برآورد قیمت
+        # اصلاح سانتی‌متر، بولد شدن قیمت نهایی، و اضافه کردن کیفیت درجه ۱
         result_msg = (
             f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
-            f"📐 عرض: {int(width)} سم | ارتفاع: {int(height)} سم\n"
+            f"📐 عرض: {int(width)} سانتی‌متر | ارتفاع: {int(height)} سانتی‌متر\n"
             f"🧮 متراژ: {calc_area:.2f} متر مربع\n"
             f"{rules_text}"
             f"🪙 قیمت هر متر: {unit_price:,} تومان\n"
-            f"💵 قیمت نهایی: {total_price:,} تومان\n"
-            f"📦 ارسال به سراسر کشور | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
+            f"💵 **قیمت نهایی: {total_price:,} تومان**\n"
+            f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
         )
 
-        # دکمه‌های شیشه‌ای دو ستونه و فشرده
+        # دکمه‌های شیشه‌ای ۳ ستونه
         inline_kb = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}"),
-                InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
+                InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}"),
+                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"show_measure_{curtain_type}")
             ],
             [
                 InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info"),
-                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"show_measure_{curtain_type}")
-            ],
-            [InlineKeyboardButton("ثبت سفارش و مشاوره مستقیم 📝", callback_data="start_direct_order_cb")],
-            [
-                InlineKeyboardButton("خرید آنلاین 🛒", url=buy_url),
+                InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb"),
                 InlineKeyboardButton("شروع دوباره 🔄", callback_data="start_inquiry")
+            ],
+            [
+                InlineKeyboardButton("خرید آنلاین 🛒", url=buy_url)
             ]
         ])
 
-        await update.message.reply_text(result_msg, reply_markup=inline_kb)
+        await update.message.reply_text(result_msg, reply_markup=inline_kb, parse_mode='Markdown')
 
-        # یادآوری دقیقاً پس از ۲۴ ساعت (۸۶۴۰۰ ثانیه) و یک‌باره
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -419,7 +420,7 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# --- پنل مدیریت بدون Markdown و همراه با یوزرنیم‌ها ---
+# --- پنل مدیریت ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -543,7 +544,6 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await msg_target.reply_text(text)
 
-# ذکر نوع پرده در آموزش اندازه‌گیری
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
     curtain_type = "پرده"
@@ -591,7 +591,7 @@ async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "🌐 وب سایت خرید آنلاین:\nwww.FarsGallery.com"
     await update.message.reply_text(msg)
 
-# سیستم لغو هوشمند و اجرای دکمه جدید
+# مدیریت لغو هوشمند دکمه‌ها
 async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == 'شروع 🏠':
