@@ -32,7 +32,6 @@ PRICES = {
 
 USER_LIST = set()
 
-# فایل آیدی‌های نمونه‌کارها
 PORTFOLIO_IMAGES = {
     'پرده زبرا': [
         "AgACAgQAAxkBAAINgmqAN9MBBfL-fATjGc0bAvKXqcwkAAIHEGsbKiQBUD_cumH9NZmpAQADAgADeQADPQQ",
@@ -74,7 +73,6 @@ GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO, ORD_HAS_DIM, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
-# --- منوی اصلی ---
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['راهنمایی و پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
@@ -95,7 +93,6 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
         logging.error(f"Error checking channel membership: {e}")
         return True
 
-# --- تابع پیام پیگیری ۲۴ ساعت بعد ---
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
     user_id = job.chat_id
@@ -122,7 +119,6 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Failed to send follow-up message to {user_id}: {e}")
 
-# --- دریافت File ID عکس ---
 async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -134,11 +130,7 @@ async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return
 
-    text = (
-        "📸 **فایل آیدی دریافت شد:**\n\n"
-        f"`{file_id}`\n\n"
-        "📌 *کد بالا را کپی کرده و در بخش PORTFOLIO_IMAGES کد قرار دهید.*"
-    )
+    text = f"📸 **فایل آیدی دریافت شد:**\n\n`{file_id}`"
     await update.message.reply_text(text, parse_mode='Markdown')
 
 async def send_join_channel_message(update: Update):
@@ -146,10 +138,7 @@ async def send_join_channel_message(update: Update):
         [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
         [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
     ])
-    msg_text = (
-        "⚠️ **دسترسـی محدود است!**\n\n"
-        "برای استفاده از استعلام قیمت ، لطفاً ابتدا در کانال رسمی ما عضو شوید و سپس روی دکمه **بررسی عضویت 🔄** کلیک کنید."
-    )
+    msg_text = "⚠️ **دسترسـی محدود است!**\nلطفاً ابتدا در کانال عضو شوید."
     if update.message:
         await update.message.reply_text(msg_text, reply_markup=keyboard, parse_mode='Markdown')
     elif update.callback_query:
@@ -160,10 +149,7 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
         [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش انجام بدم", callback_data="start_order")]
     ])
-    welcome_msg = (
-        "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "✨ می‌توانید برای استعلام قیمت پرده و ثبت سفارش از این ربات استفاده کنید."
-    )
+    welcome_msg = "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨"
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
         await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
@@ -305,13 +291,10 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
-        # ----------------------------------------------------
-        # ⏰ زمان‌بندی پیام پیگیری اتوماتیک برای ۲۴ ساعت بعد
-        # ----------------------------------------------------
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
-                when=86400,  # 86400 ثانیه = 24 ساعت
+                when=86400,
                 chat_id=update.effective_chat.id,
                 data={'curtain_type': curtain_type}
             )
@@ -321,6 +304,136 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
+
+# --- سیستم جدید و هوشمند ثبت سفارش و ارسال آنی به ادمین ---
+
+async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_target = update.message or update.callback_query.message
+    await msg_target.reply_text("📝 جهت ثبت سفارش یا مشاوره، لطفاً **نام و نام خانوادگی** خود را وارد کنید:")
+    return ORD_NAME
+
+async def start_direct_order_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    return await start_direct_order(update, context)
+
+async def get_ord_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_name'] = update.message.text
+    await update.message.reply_text("📞 لطفاً **شماره تماس** خود را وارد کنید:")
+    return ORD_PHONE
+
+async def get_ord_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_phone'] = update.message.text
+    await update.message.reply_text("🪟 **نوع پرده** مورد نظر را وارد کنید:")
+    return ORD_TYPE
+
+async def get_ord_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_type'] = update.message.text
+    await update.message.reply_text("📍 لطفاً **شهر و آدرس** خود را وارد کنید:")
+    return ORD_ADDRESS
+
+async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_address'] = update.message.text
+    username = update.effective_user.username
+    user_handle = f"@{username}" if username else "بدون یوزرنیم"
+
+    # 1️⃣ ارسال آنی اطلاعات اولیه برای ادمین
+    admin_init_msg = (
+        "📥 **سفارش / مشاوره جدید (مشخصات اولیه)**\n\n"
+        f"👤 **نام:** {context.user_data.get('order_name')}\n"
+        f"📞 **تلفن:** {context.user_data.get('order_phone')}\n"
+        f"🪟 **نوع پرده:** {context.user_data.get('order_type')}\n"
+        f"📍 **آدرس:** {context.user_data.get('order_address')}\n"
+        f"👤 **یوزرنیم مشتری:** {user_handle}"
+    )
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_init_msg, parse_mode='Markdown')
+
+    # پیام موفقیت اولیه به مشتری
+    photo_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("رد کردن این مرحله ⏩", callback_data="skip_photo")]
+    ])
+    await update.message.reply_text(
+        "✅ **مشخصات شما با موفقیت ثبت شد.**\n\n"
+        "📸 اگر مایل هستید، تصویر پنجره مورد نظر را ارسال کنید تا بهتر راهنماییتون کنیم.\n"
+        "⚠️ *لطفاً توجه داشته باشید اگر چند تصویر دارید، همه را یکجا ارسال کنید.*",
+        reply_markup=photo_kb,
+        parse_mode='Markdown'
+    )
+    return ORD_PHOTO
+
+async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    username = update.effective_user.username
+    user_handle = f"@{username}" if username else "بدون یوزرنیم"
+
+    if update.message.photo:
+        photo_file_id = update.message.photo[-1].file_id
+        # 2️⃣ ارسال عکس برای ادمین
+        caption_text = (
+            f"📸 **تصویر ارسال شده توسط مشتری**\n\n"
+            f"👤 **نام:** {context.user_data.get('order_name')}\n"
+            f"👤 **یوزرنیم مشتری:** {user_handle}"
+        )
+        await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
+        await update.message.reply_text("✅ **عکس با موفقیت دریافت شد.**")
+    
+    return await ask_dimensions(update, context)
+
+async def skip_ord_photo_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    return await ask_dimensions(update, context)
+
+async def ask_dimensions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dim_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("بله، ابعاد و اندازه دارم 📐", callback_data="has_dim")],
+        [InlineKeyboardButton("خیر، ابعاد ندارم ❌", callback_data="no_dim")]
+    ])
+    msg_target = update.message or update.callback_query.message
+    await msg_target.reply_text("📏 **آیا ابعاد و اندازه‌ی پنجره را دارید؟**", reply_markup=dim_kb, parse_mode='Markdown')
+    return ORD_HAS_DIM
+
+async def handle_dim_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "has_dim":
+        await query.message.reply_text("📐 لطفاً **عرض** پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
+        return ORD_WIDTH
+    else:
+        await query.message.reply_text("🎉 **سفارش شما تکمیل شد.** کارشناسان ما به زودی با شما تماس خواهند گرفت.", reply_markup=PERSISTENT_KEYBOARD)
+        return ConversationHandler.END
+
+async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_width'] = update.message.text
+    await update.message.reply_text("📐 لطفاً **ارتفاع** پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
+    return ORD_HEIGHT
+
+async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_height'] = update.message.text
+    width_val = context.user_data.get('order_width')
+    height_val = context.user_data.get('order_height')
+    username = update.effective_user.username
+    user_handle = f"@{username}" if username else "بدون یوزرنیم"
+
+    # 3️⃣ ارسال تکمیلی ابعاد برای ادمین
+    admin_dim_msg = (
+        "📐 **ابعاد تکمیلی ثبت‌شده مشتری:**\n\n"
+        f"👤 **نام:** {context.user_data.get('order_name')}\n"
+        f"📏 **عرض:** {width_val} سانتی‌متر\n"
+        f"📏 **ارتفاع:** {height_val} سانتی‌متر\n"
+        f"👤 **یوزرنیم مشتری:** {user_handle}"
+    )
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_dim_msg, parse_mode='Markdown')
+
+    # پیام موفقیت ثبت ابعاد به مشتری
+    await update.message.reply_text(
+        "✅ **ابعاد و اندازه‌ها با موفقیت ثبت گردید.**\n\n"
+        "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت.",
+        reply_markup=PERSISTENT_KEYBOARD
+    )
+    return ConversationHandler.END
+
+# --- سایر بخش‌های سیستم ---
 
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -350,14 +463,10 @@ async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     
     msg = (
         "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
-        f"1️⃣ **پرده شید ساده** (پیشنهاد ما برای مسکونی)\n"
-        f"🔗 [فروشگاه اینترنتی فارس گالری - شید رول]({PRODUCT_LINKS['پرده شید ساده']})\n\n"
-        f"2️⃣ **پرده شید بلک اوت** (پیشنهاد ما برای اداری)\n"
-        f"🔗 [فروشگاه اینترنتی فارس گالری - شید بلک اوت]({PRODUCT_LINKS['پرده شید بلک اوت']})\n\n"
-        f"3️⃣ **پرده زبرا** (پیشنهاد ما برای مسکونی)\n"
-        f"🔗 [فروشگاه اینترنتی فارس گالری - زبرا ساده]({PRODUCT_LINKS['پرده زبرا']})\n\n"
-        f"4️⃣ **پرده کرکره فلزی** (پیشنهاد ما برای اداری یا تجاری)\n"
-        f"🔗 [فروشگاه اینترنتی فارس گالری - کرکره فلزی]({PRODUCT_LINKS['پرده کرکره فلزی']})"
+        f"1️⃣ **پرده شید ساده**\n🔗 [فروشگاه اینترنتی فارس گالری]({PRODUCT_LINKS['پرده شید ساده']})\n\n"
+        f"2️⃣ **پرده شید بلک اوت**\n🔗 [فروشگاه اینترنتی فارس گالری]({PRODUCT_LINKS['پرده شید بلک اوت']})\n\n"
+        f"3️⃣ **پرده زبرا**\n🔗 [فروشگاه اینترنتی فارس گالری]({PRODUCT_LINKS['پرده زبرا']})\n\n"
+        f"4️⃣ **پرده کرکره فلزی**\n🔗 [فروشگاه اینترنتی فارس گالری]({PRODUCT_LINKS['پرده کرکره فلزی']})"
     )
     await query.message.reply_text(msg, parse_mode='Markdown', disable_web_page_preview=True)
 
@@ -376,124 +485,11 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     p_name = query.data.replace("port_", "")
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     if not imgs:
-        await query.message.reply_text(f"⚠️ هنوز تصویری برای **{p_name}** در سیستم ثبت نشده است.", parse_mode='Markdown')
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای **{p_name}** ثبت نشده است.", parse_mode='Markdown')
         return
     await query.message.reply_text(f"📸 **نمونه کارهای {p_name}:**", parse_mode='Markdown')
     for img in imgs:
         await query.message.reply_photo(photo=img)
-
-# --- سیستم ثبت سفارش و مشاوره ---
-async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg_target = update.message or update.callback_query.message
-    await msg_target.reply_text("📝 جهت ثبت سفارش مستقیم یا مشاوره تلفنی، لطفاً **نام و نام خانوادگی** خود را وارد کنید:")
-    return ORD_NAME
-
-async def start_direct_order_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    return await start_direct_order(update, context)
-
-async def get_ord_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_name'] = update.message.text
-    await update.message.reply_text("📞 لطفاً **شماره تماس** خود را وارد کنید:")
-    return ORD_PHONE
-
-async def get_ord_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_phone'] = update.message.text
-    await update.message.reply_text("🪟 **نوع پرده** مورد نظر را وارد کنید:")
-    return ORD_TYPE
-
-async def get_ord_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_type'] = update.message.text
-    await update.message.reply_text("📍 لطفاً **شهر و آدرس** خود را وارد کنید:")
-    return ORD_ADDRESS
-
-async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_address'] = update.message.text
-    
-    photo_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("رد کردن این مرحله ⏩", callback_data="skip_photo")]
-    ])
-    await update.message.reply_text(
-        "✅ **مشخصات شما با موفقیت ثبت شد.**\n\n"
-        "📸 اگر مایل هستید، تصویر پنجره مورد نظر را ارسال کنید تا بهتر راهنماییتون کنیم.\n"
-        "(در غیر این صورت گزینه «رد کردن» را بزنید)",
-        reply_markup=photo_kb,
-        parse_mode='Markdown'
-    )
-    return ORD_PHOTO
-
-async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.photo:
-        context.user_data['order_photo'] = update.message.photo[-1].file_id
-    else:
-        context.user_data['order_photo'] = None
-
-    return await ask_dimensions(update, context)
-
-async def skip_ord_photo_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    context.user_data['order_photo'] = None
-    return await ask_dimensions(update, context)
-
-async def ask_dimensions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dim_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("بله، ابعاد و اندازه دارم 📐", callback_data="has_dim")],
-        [InlineKeyboardButton("خیر، ابعاد ندارم ❌", callback_data="no_dim")]
-    ])
-    msg_target = update.message or update.callback_query.message
-    await msg_target.reply_text("📏 **آیا ابعاد و اندازه‌ی پنجره را دارید؟**", reply_markup=dim_kb, parse_mode='Markdown')
-    return ORD_HAS_DIM
-
-async def handle_dim_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    if query.data == "has_dim":
-        await query.message.reply_text("📐 لطفاً **عرض** پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
-        return ORD_WIDTH
-    else:
-        context.user_data['order_width'] = "ثبت نشده"
-        context.user_data['order_height'] = "ثبت نشده"
-        return await finalize_order(update, context)
-
-async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_width'] = update.message.text
-    await update.message.reply_text("📐 لطفاً **ارتفاع** پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
-    return ORD_HEIGHT
-
-async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_height'] = update.message.text
-    return await finalize_order(update, context)
-
-async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg_target = update.message or update.callback_query.message
-    
-    photo_file_id = context.user_data.get('order_photo')
-    width_val = context.user_data.get('order_width', 'ثبت نشده')
-    height_val = context.user_data.get('order_height', 'ثبت نشده')
-
-    order_text = (
-        "📥 **سفارش / مشاوره جدید**\n\n"
-        f"👤 **نام:** {context.user_data.get('order_name')}\n"
-        f"📞 **تلفن:** {context.user_data.get('order_phone')}\n"
-        f"🪟 **نوع پرده:** {context.user_data.get('order_type')}\n"
-        f"📍 **آدرس:** {context.user_data.get('order_address')}\n"
-        f"📏 **ابعاد:** عرض {width_val} | ارتفاع {height_val}\n"
-        f"🆔 **کاربر:** @{update.effective_user.username or 'بدون آیدی'} (ID: {update.effective_user.id})"
-    )
-
-    if photo_file_id:
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=order_text, parse_mode='Markdown')
-    else:
-        await context.bot.send_message(chat_id=ADMIN_ID, text=order_text, parse_mode='Markdown')
-
-    await msg_target.reply_text(
-        "🎉 **سفارش شما با موفقیت تکمیل گردید.**\nکارشناسان ما به زودی با شما تماس خواهند گرفت.",
-        reply_markup=PERSISTENT_KEYBOARD
-    )
-    return ConversationHandler.END
 
 async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -502,10 +498,9 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "🚚 **محاسبه هزینه نصب، اندازه‌گیری و ارسال:**\n\n"
         "📏 **هزینه اندازه‌گیری (شیراز):** 500,000 تومان\n"
-        "🛠 **هزینه نصب:** هر درگاه 500,000 تومان (پنجره تک‌تکه = ۱ درگاه)\n"
+        "🛠 **هزینه نصب:** هر درگاه 500,000 تومان\n"
         "🚕 **کرایه حمل (شیراز):** 150,000 تومان\n"
-        "📦 **ارسال به سایر شهرها:** بسته‌بندی مقاوم و ارسال با تیپاکس (پس‌کرایه)\n\n"
-        "📞 جهت هماهنگی نصب در شهرستان‌ها تماس بگیرید."
+        "📦 **ارسال به سایر شهرها:** با تیپاکس (پس‌کرایه)"
     )
     await msg_target.reply_text(text, parse_mode='Markdown')
 
@@ -515,24 +510,18 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
         await update.callback_query.answer()
     guide_text = (
         "📐 **آموزش جامع اندازه‌گیری پرده:**\n\n"
-        "1️⃣ **خارج از چهارچوب (روکار):**\n"
-        "• **عرض:** عرض پنجره + ۱۵ سانتی‌متر\n"
-        "• **ارتفاع:** ارتفاع پنجره + ۲۰ سانتی‌متر\n\n"
-        "2️⃣ **داخل چهارچوب (توکار):**\n"
-        "• **عرض:** عرض کامل چهارچوب منفی ۱ سانتی‌متر\n"
-        "• **ارتفاع:** ارتفاع کامل چهارچوب + ۲۰ سانتی‌متر\n\n"
-        "📌 **توصیه می‌شود حتماً از متر فلزی استفاده کنید.**"
+        "1️⃣ **خارج از چهارچوب:** عرض + ۱۵ سانتی‌متر | ارتفاع + ۲۰ سانتی‌متر\n"
+        "2️⃣ **داخل چهارچوب:** عرض منفی ۱ سانتی‌متر | ارتفاع + ۲۰ سانتی‌متر"
     )
     await msg_target.reply_text(guide_text, parse_mode='Markdown')
 
-# --- پنل مدیریت اختصاصی (/admin) ---
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 آمار ربات", callback_data="admin_stats")],
         [InlineKeyboardButton("💵 تغییر قیمت محصولات", callback_data="admin_change_price")],
-        [InlineKeyboardButton("👥 لیست آیدی کاربران", callback_data="admin_users")]
+        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم)", callback_data="admin_users")]
     ])
     await update.message.reply_text("⚙️ **پنل مدیریت فارس گالری:**", reply_markup=kb, parse_mode='Markdown')
 
@@ -545,8 +534,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "admin_stats":
         await query.message.reply_text(f"📊 **تعداد کل کاربران:** {len(USER_LIST)} نفر")
     elif query.data == "admin_users":
-        users_str = "\n".join([str(u) for u in USER_LIST])
-        await query.message.reply_text(f"👥 **آیدی کاربران:**\n\n{users_str}")
+        await query.message.reply_text(f"👥 **تعداد کاربران ثبت شده:** {len(USER_LIST)} نفر")
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="setp_پرده شید ساده")],
@@ -685,7 +673,6 @@ def main():
     app.add_handler(direct_order_conv)
     app.add_handler(admin_conv)
     
-    # دکمه‌های منو
     app.add_handler(MessageHandler(filters.Regex('^شروع 🏠$'), start_command))
     app.add_handler(MessageHandler(filters.Regex('^راهنمایی و پیشنهاد نوع پرده 💡$'), suggest_curtain))
     app.add_handler(MessageHandler(filters.Regex('^وب سایت خرید آنلاین 🌐$'), show_website))
@@ -695,7 +682,6 @@ def main():
     app.add_handler(MessageHandler(filters.Regex('^آموزش اندازه‌گیری 📐$'), show_measurement_guide))
     app.add_handler(MessageHandler(filters.Regex('^محاسبه هزینه نصب و ارسال 🚚$'), calc_services))
     
-    # کالبک‌ها
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
     app.add_handler(CallbackQueryHandler(show_curtains_callback, pattern="^start_inquiry$"))
     app.add_handler(CallbackQueryHandler(start_order_callback, pattern="^start_order$"))
