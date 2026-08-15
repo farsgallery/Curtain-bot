@@ -126,7 +126,7 @@ async def send_join_channel_message(update: Update):
 async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
-        [InlineKeyboardButton("2️⃣ میخواهم ثبت سفارش مستقیم در سایت فارس گالری انجام بدم", callback_data="start_order")],
+        [InlineKeyboardButton("2️⃣ ثبت سفارش و خرید در سایت فارس گالری", callback_data="start_order")],
         [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")]
     ])
     welcome_msg = (
