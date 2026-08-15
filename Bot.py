@@ -238,7 +238,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🪙 قیمت واحد هر مترمربع:\n{unit_price:,} تومان\n\n"
             f"💵 قیمت نهایی:\n{total_price:,} تومان\n\n"
             f"📦 هر شهری باشی ارسال میکنم\n"
-            f"🛡 2 سال ضمانت\n"
+            f"🛡 5 سال ضمانت\n"
             f"🚚 سه روز کاری تحویلت میدم\n"
             f"✨ کیفیت درجه یک 😍😍"
         )
