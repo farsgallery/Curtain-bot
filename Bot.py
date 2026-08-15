@@ -67,7 +67,7 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 GET_WIDTH, GET_HEIGHT = range(2)
-ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO, ORD_HAS_DIM, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
+ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO_CHOICE, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
@@ -248,7 +248,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
-        # اصلاح سانتی‌متر، بولد شدن قیمت نهایی، و اضافه کردن کیفیت درجه ۱
         result_msg = (
             f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
@@ -260,15 +259,17 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
         )
 
-        # دکمه‌های شیشه‌ای ۳ ستونه
+        # دکمه‌های شیشه‌ای دو ستونه بخش استعلام قیمت
         inline_kb = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}"),
-                InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}"),
-                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"show_measure_{curtain_type}")
+                InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
             ],
             [
-                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info"),
+                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"show_measure_{curtain_type}"),
+                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")
+            ],
+            [
                 InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb"),
                 InlineKeyboardButton("شروع دوباره 🔄", callback_data="start_inquiry")
             ],
@@ -335,16 +336,31 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await context.bot.send_message(chat_id=ADMIN_ID, text=admin_init_msg)
 
-    photo_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("رد کردن این مرحله ⏩", callback_data="skip_photo")]
+    next_step_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("میخوام عکس پنجره ارسال کنم 📸", callback_data="choice_send_photo")],
+        [InlineKeyboardButton("میخوام اندازه پنجره رو بگم 📐", callback_data="choice_send_dim")]
     ])
+    
     await update.message.reply_text(
         "✅ مشخصات شما با موفقیت ثبت شد.\n\n"
-        "📸 اگر مایل هستید، تصویر پنجره مورد نظر را ارسال کنید تا بهتر راهنماییتون کنیم.\n"
-        "⚠️ لطفاً توجه داشته باشید اگر چند تصویر دارید، همه را یکجا ارسال کنید.",
-        reply_markup=photo_kb
+        "لطفاً گام بعدی خود را انتخاب کنید:",
+        reply_markup=next_step_kb
     )
-    return ORD_PHOTO
+    return ORD_PHOTO_CHOICE
+
+async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "choice_send_photo":
+        await query.message.reply_text(
+            "📸 لطفاً تصویر پنجره مورد نظر را ارسال کنید:\n"
+            "⚠️ اگر چند تصویر دارید، همه را یکجا ارسال کنید."
+        )
+        return ORD_PHOTO
+    else:
+        await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
+        return ORD_WIDTH
 
 async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
@@ -365,32 +381,8 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
     
-    return await ask_dimensions(update, context)
-
-async def skip_ord_photo_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    return await ask_dimensions(update, context)
-
-async def ask_dimensions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dim_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("بله، ابعاد و اندازه دارم 📐", callback_data="has_dim")],
-        [InlineKeyboardButton("خیر، ابعاد ندارم ❌", callback_data="no_dim")]
-    ])
-    msg_target = update.message or update.callback_query.message
-    await msg_target.reply_text("📏 آیا ابعاد و اندازه‌ی پنجره را دارید؟", reply_markup=dim_kb)
-    return ORD_HAS_DIM
-
-async def handle_dim_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    if query.data == "has_dim":
-        await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
-        return ORD_WIDTH
-    else:
-        await query.message.reply_text("🎉 سفارش شما تکمیل شد. کارشناسان ما به زودی با شما تماس خواهند گرفت.", reply_markup=PERSISTENT_KEYBOARD)
-        return ConversationHandler.END
+    await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
+    return ORD_WIDTH
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_width'] = update.message.text
@@ -641,12 +633,11 @@ def main():
             ORD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_phone)],
             ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_type)],
             ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_address)],
-            ORD_PHOTO: [
-                MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo),
-                CallbackQueryHandler(skip_ord_photo_cb, pattern="^skip_photo$")
+            ORD_PHOTO_CHOICE: [
+                CallbackQueryHandler(handle_photo_choice, pattern="^(choice_send_photo|choice_send_dim)$")
             ],
-            ORD_HAS_DIM: [
-                CallbackQueryHandler(handle_dim_choice, pattern="^(has_dim|no_dim)$")
+            ORD_PHOTO: [
+                MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo)
             ],
             ORD_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_width)],
             ORD_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_height)]
