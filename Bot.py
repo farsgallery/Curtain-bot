@@ -78,6 +78,12 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['ساعات کاری 🕒', 'آدرس و شماره تماس 📍']
 ], resize_keyboard=True)
 
+def convert_to_english_digits(text: str) -> str:
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩'
+    english_digits = '01234567890123456789'
+    translation_table = str.maketrans(persian_digits, english_digits)
+    return text.translate(translation_table)
+
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
@@ -192,23 +198,23 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     return GET_WIDTH
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    raw_text = convert_to_english_digits(update.message.text.strip())
     try:
-        width = float(text)
+        width = float(raw_text)
         context.user_data['width'] = width
         await update.message.reply_text("لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثال: 200):")
         return GET_HEIGHT
     except ValueError:
-        await update.message.reply_text("⚠️ لطفاً عرض را به صورت عدد وارد کنید (مثال: 150).")
+        await update.message.reply_text("⚠️ لطفاً عرض را فقط به صورت عدد وارد کنید (مثال: 150).")
         return GET_WIDTH
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    raw_text = convert_to_english_digits(update.message.text.strip())
     try:
-        height = float(text)
-        width = context.user_data['width']
-        curtain_type = context.user_data['curtain_type']
-        curtain_icon = context.user_data['curtain_icon']
+        height = float(raw_text)
+        width = context.user_data.get('width', 100)
+        curtain_type = context.user_data.get('curtain_type', 'پرده زبرا')
+        curtain_icon = context.user_data.get('curtain_icon', curtain_type)
         
         unit_price = PRICES.get(curtain_type, 2000000)
         rules_applied = []
@@ -291,7 +297,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     except ValueError:
-        await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
+        await update.message.reply_text("⚠️ لطفاً ارتفاع را فقط به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
 # --- سیستم آموزش اندازه‌گیری ---
@@ -476,12 +482,12 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ORD_WIDTH
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_width'] = update.message.text
+    context.user_data['order_width'] = convert_to_english_digits(update.message.text.strip())
     await update.message.reply_text("📐 لطفاً ارتفاع پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
     return ORD_HEIGHT
 
 async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_height'] = update.message.text
+    context.user_data['order_height'] = convert_to_english_digits(update.message.text.strip())
     width_val = context.user_data.get('order_width')
     height_val = context.user_data.get('order_height')
     username = update.effective_user.username
@@ -548,8 +554,9 @@ async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_T
 
 async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p_name = context.user_data.get('editing_product')
+    raw_text = convert_to_english_digits(update.message.text.strip())
     try:
-        new_val = int(update.message.text)
+        new_val = int(raw_text)
         PRICES[p_name] = new_val
         await update.message.reply_text(f"✅ قیمت {p_name} با موفقیت به {new_val:,} تومان تغییر یافت.")
     except ValueError:
@@ -729,7 +736,12 @@ def main():
             GET_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_width)],
             GET_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_height)]
         },
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False,
+        conversation_timeout=300
     )
 
     direct_order_conv = ConversationHandler(
@@ -751,13 +763,22 @@ def main():
             ORD_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_width)],
             ORD_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_height)]
         },
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False,
+        conversation_timeout=300
     )
 
     admin_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(select_price_to_change, pattern="^setp_")],
         states={SET_PR_VAL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), save_new_price)]},
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False
     )
 
     app.add_handler(CommandHandler('start', start_command))
