@@ -5,7 +5,7 @@ import jdatetime
 import http.server
 import socketserver
 import threading
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, BotCommand, BotCommandScopeChat
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, BotCommandScopeChat
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, 
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
@@ -33,12 +33,12 @@ PRICES = {
 
 USER_LIST = {} 
 
-# عکس‌های نمونه‌کار (آیدی‌های جدید دریافت شده را اینجا جایگزین کنید)
-PORTFOLIO_IMAGES = {
-    'پرده زبرا': [],
-    'پرده کرکره فلزی': [],
-    'پرده شید ساده': [],
-    'پرده شید بلک اوت': []
+# شماره پست‌های آلبوم در کانال تلگرام شما
+PORTFOLIO_POSTS = {
+    'پرده زبرا': [1283, 1273, 1263],
+    'پرده شید ساده': [1295, 1285],
+    'پرده کرکره فلزی': [1315, 1305],
+    'پرده شید بلک اوت': [1324]
 }
 
 def run_dummy_server():
@@ -154,17 +154,6 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_welcome_message(update, context)
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
-
-# دریافت اختصاصی File ID برای ادمین
-async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id == ADMIN_ID:
-        photo = update.message.photo[-1]
-        file_id = photo.file_id
-        await update.message.reply_text(
-            f"📥 **File ID عکس دریافتی:**\n\n<code>{file_id}</code>\n\n"
-            "👆 روی کد بالا بزنید تا کپی شود، سپس آن را در دیکشنری PORTFOLIO_IMAGES قرار دهید.",
-            parse_mode="HTML"
-        )
 
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -539,20 +528,26 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
+# تابع کپی مستقیم آلبوم‌ها از کانال تلگرام
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     p_name = query.data.replace("port_", "")
-    imgs = PORTFOLIO_IMAGES.get(p_name, [])
-    if not imgs:
+    post_ids = PORTFOLIO_POSTS.get(p_name, [])
+    
+    if not post_ids:
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
     
-    media_group = [
-        InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}" + BOT_FOOTER if i == 0 else "")
-        for i, img_id in enumerate(imgs)
-    ]
-    await update.effective_chat.send_media_group(media=media_group)
+    for msg_id in post_ids:
+        try:
+            await context.bot.copy_message(
+                chat_id=update.effective_chat.id,
+                from_chat_id=CHANNEL_USERNAME,
+                message_id=msg_id
+            )
+        except Exception as e:
+            logging.error(f"Error copying message {msg_id} from {CHANNEL_USERNAME}: {e}")
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
@@ -723,9 +718,6 @@ def main():
 
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
-
-    # هندلر اختصاصی گرفتن File ID برای ادمین
-    app.add_handler(MessageHandler(filters.PHOTO & filters.User(ADMIN_ID), get_photo_file_id))
 
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
