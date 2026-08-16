@@ -14,6 +14,7 @@ from telegram.ext import (
 ADMIN_ID = 333050909  
 ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
+BOT_FOOTER = "\n\nمحاسبه قیمت پرده در ربات تلگرام فارس گالری @farsgallery_bot"
 
 PRODUCT_LINKS = {
     'پرده شید ساده': 'https://farsgallery.com/product-category/curtains/shid/',
@@ -103,7 +104,7 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
         f"امیدوارم حالتون عالی باشه. دیروز برای {curtain_type} استعلام قیمت گرفته بودید؛ "
         "خواستم پیگیری کنم ببینم تصمیمتون برای ثبت سفارش چی شد؟ 😊\n\n"
         "اگر سوالی در مورد رنگ‌بندی، کیفیت یا اندازه‌گیری دارید یا احتیاج به راهنمایی بیشتری هست، خوشحال می‌شیم کمکتون کنیم.\n\n"
-        "📞 شماره تماس مستقیم جهت مشاوره:\n09215657634\n\nدر خدمتتون هستیم! ✨"
+        "📞 شماره تماس مستقیم جهت مشاوره:\n09215657634\n\nدر خدمتتون هستیم! ✨" + BOT_FOOTER
     )
 
     try:
@@ -116,7 +117,7 @@ async def send_join_channel_message(update: Update):
         [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
         [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
     ])
-    msg_text = "⚠️ دسترسی محدود است!\nلطفاً ابتدا در کانال عضو شوید."
+    msg_text = "⚠️ دسترسی محدود است!\nلطفاً ابتدا در کانال عضو شوید." + BOT_FOOTER
     if update.message:
         await update.message.reply_text(msg_text, reply_markup=keyboard)
     elif update.callback_query:
@@ -130,7 +131,7 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     ])
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید."
+        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید." + BOT_FOOTER
     )
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
@@ -256,6 +257,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
             f"💵 **قیمت نهایی: {total_price:,} تومان**\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
+            f"{BOT_FOOTER}"
         )
 
         inline_kb = InlineKeyboardMarkup([
@@ -359,7 +361,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
                 "۳. بعد از اندازه‌گیری عرض، ارتفاع را اندازه‌گیری کرده و **بیست سانتی‌متر** به ارتفاع اضافه کنید تا از پوشش کامل پنجره اطمینان داشته باشید.\n"
                 "*(نکته: در صورتی که فضای بالای پنجره خارج چارچوب باشد و پایین پنجره خالی باشد، حداقل ۵ سانتی‌متر نیز به پایین پنجره اضافه می‌شود)*"
             )
-        final_msg = tools_text + notes + detail
+        final_msg = tools_text + notes + detail + BOT_FOOTER
 
     else: # kerkere
         if pos == "inside":
@@ -379,7 +381,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
                 "۳. **در ارتفاع پرده:** اگر مانعی در پایین پرده مثل رادیاتور، پیشخوان یا کابینت قرار ندارد، جهت همپوشانی در حالت سایه و نیمه‌سایه حتماً **۲۰ سانتی‌متر** به ارتفاع اضافه کنید.\n"
                 "۴. فاصله بالای پرده (محل نصب پایه) باید به اندازه کافی جهت سوراخ‌کاری باشد. در این حالت می‌توانید پرده را به صورت دیواری یا سقفی نصب کنید."
             )
-        final_msg = tools_text + detail
+        final_msg = tools_text + detail + BOT_FOOTER
 
     await query.message.reply_text(final_msg, parse_mode='Markdown')
 
@@ -432,7 +434,7 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         "✅ مشخصات شما با موفقیت ثبت شد.\n\n"
-        "لطفاً گام بعدی خود را انتخاب کنید:",
+        "لطفاً گام بعدی خود را انتخاب کنید:" + BOT_FOOTER,
         reply_markup=next_step_kb
     )
     return ORD_PHOTO_CHOICE
@@ -496,7 +498,7 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "✅ ابعاد و اندازه‌ها با موفقیت ثبت گردید.\n\n"
-        "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت.",
+        "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت." + BOT_FOOTER,
         reply_markup=PERSISTENT_KEYBOARD
     )
     return ConversationHandler.END
@@ -562,13 +564,13 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     p_name = query.data.replace("port_", "")
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     if not imgs:
-        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
     
     media_group = []
     for i, img_id in enumerate(imgs):
         if i == 0:
-            media_group.append(InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}"))
+            media_group.append(InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}" + BOT_FOOTER))
         else:
             media_group.append(InputMediaPhoto(media=img_id))
 
@@ -588,12 +590,12 @@ async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     
     if query.data == 'sugg_office':
-        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است."
+        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است." + BOT_FOOTER
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری کرکره فلزی", callback_data="select_پرده کرکره فلزی")]
         ])
     else:
-        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید 🪟** یا **پرده زبرا 🦓** است."
+        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید 🪟** یا **پرده زبرا 🦓** است." + BOT_FOOTER
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده زبرا", callback_data="select_پرده زبرا")],
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده شید ساده", callback_data="select_پرده شید ساده")]
@@ -623,7 +625,7 @@ async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 async def color_selected_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("رنگ انتخاب شد!")
-    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از دکمه «ثبت سفارش و مشاوره مستقیم» استفاده کنید.")
+    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از دکمه «ثبت سفارش و مشاوره مستقیم» استفاده کنید." + BOT_FOOTER)
 
 async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -634,7 +636,7 @@ async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         f"1️⃣ پرده شید ساده\n🔗 {PRODUCT_LINKS['پرده شید ساده']}\n\n"
         f"2️⃣ پرده شید بلک اوت\n🔗 {PRODUCT_LINKS['پرده شید بلک اوت']}\n\n"
         f"3️⃣ پرده زبرا\n🔗 {PRODUCT_LINKS['پرده زبرا']}\n\n"
-        f"4️⃣ پرده کرکره فلزی\n🔗 {PRODUCT_LINKS['پرده کرکره فلزی']}"
+        f"4️⃣ پرده کرکره فلزی\n🔗 {PRODUCT_LINKS['پرده کرکره فلزی']}" + BOT_FOOTER
     )
     await query.message.reply_text(msg, disable_web_page_preview=True)
 
@@ -656,7 +658,7 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📏 هزینه اندازه‌گیری (شیراز): 500,000 تومان\n"
         "🛠 هزینه نصب: هر درگاه 500,000 تومان\n"
         "🚕 کرایه حمل (شیراز): 150,000 تومان\n"
-        "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
+        "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)" + BOT_FOOTER
     )
     await msg_target.reply_text(text)
 
@@ -664,16 +666,16 @@ async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         "📍 آدرس و شماره تماس:\n\n"
         "شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه یک، مجموعه گالری هنری ایران دکوراسیون (فارس گالری)\n\n"
-        "📞 شماره تماس: 07136277172"
+        "📞 شماره تماس: 07136277172" + BOT_FOOTER
     )
     await update.message.reply_text(msg)
 
 async def show_hours(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🕒 ساعات کاری مجموعه:\n\n☀️ صبح: از 09:00 تا 13:00\n🌙 عصر: از 17:00 تا 21:00"
+    msg = "🕒 ساعات کاری مجموعه:\n\n☀️ صبح: از 09:00 تا 13:00\n🌙 عصر: از 17:00 تا 21:00" + BOT_FOOTER
     await update.message.reply_text(msg)
 
 async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🌐 وب سایت خرید آنلاین:\nwww.FarsGallery.com"
+    msg = "🌐 وب سایت خرید آنلاین:\nwww.FarsGallery.com" + BOT_FOOTER
     await update.message.reply_text(msg)
 
 # مدیریت لغو هوشمند دکمه‌ها
