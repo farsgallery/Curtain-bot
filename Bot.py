@@ -33,25 +33,12 @@ PRICES = {
 
 USER_LIST = {} 
 
+# عکس‌های نمونه‌کار (آیدی‌های جدید دریافت شده را اینجا جایگزین کنید)
 PORTFOLIO_IMAGES = {
-    'پرده زبرا': [
-        "AgACAgQAAxkBAAINgmqAN9MBBfL-fATjGc0bAvKXqcwkAAIHEGsbKiQBUD_cumH9NZmpAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINg2qAN9M86Ch402OO3kv9dngq5utnAAIIEGsbKiQBUDOPifTSJATYAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINhGqAN9MufbDbySYx6hiDtQheDuTbAAIJEGsbKiQBUNTZcyys1KRDAQADAgADeQADPQQ"
-    ],
-    'پرده کرکره فلزی': [
-        "AgACAgQAAxkBAAINiGqAOB48r5f99pD3JAoT3IJ4YA-FAAINEGsbKiQBUKYBX3ntTJLPAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINiWqAOB78ixk8x7bWq2mT0Az0mZZXAAIOEGsbKiQBUK8hQZZmc8J4AQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINimqAOB6Dw-IGQRft6PAnxfuXvXHYAAJsD2sb03MBUG8XGvaJAbRPAQADAgADeQADPQQ"
-    ],
-    'پرده شید ساده': [
-        "AgACAgQAAxkBAAINjmqAOGeyv2OWNrt-3xAffcH-IgxPAAIQEGsbKiQBUHsdkKQY4gXPAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINj2qAOGe9JfdiH_qXeNihXAFeXHB1AAJwD2sb03MBUHsa4Jyg84PeAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINkmqAOJe30jXWZERkxzIpnIbswDZNAAIREGsbKiQBUAkolxQ5GHJNAQADAgADeQADPQQ"
-    ],
-    'پرده شید بلک اوت': [
-        "AgACAgQAAxkBAAINgGqAN4xO0CG4N5YJ__6hjPGfSrDJAAIGEGsbKiQBUFBGGh9u51EmAQADAgADeQADPQQ"
-    ]
+    'پرده زبرا': [],
+    'پرده کرکره فلزی': [],
+    'پرده شید ساده': [],
+    'پرده شید بلک اوت': []
 }
 
 def run_dummy_server():
@@ -167,6 +154,17 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_welcome_message(update, context)
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
+
+# دریافت اختصاصی File ID برای ادمین
+async def get_photo_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id == ADMIN_ID:
+        photo = update.message.photo[-1]
+        file_id = photo.file_id
+        await update.message.reply_text(
+            f"📥 **File ID عکس دریافتی:**\n\n<code>{file_id}</code>\n\n"
+            "👆 روی کد بالا بزنید تا کپی شود، سپس آن را در دیکشنری PORTFOLIO_IMAGES قرار دهید.",
+            parse_mode="HTML"
+        )
 
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -725,6 +723,9 @@ def main():
 
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
+
+    # هندلر اختصاصی گرفتن File ID برای ادمین
+    app.add_handler(MessageHandler(filters.PHOTO & filters.User(ADMIN_ID), get_photo_file_id))
 
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
