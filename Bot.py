@@ -15,6 +15,9 @@ ADMIN_ID = 333050909
 ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
 
+# فوتر بدون کاراکترهای خراب‌کننده فرمت
+BOT_FOOTER = "\n\nمحاسبه قیمت پرده در ربات تلگرام فارس گالری\n@farsgallery_bot"
+
 PRODUCT_LINKS = {
     'پرده شید ساده': 'https://farsgallery.com/product-category/curtains/shid/',
     'پرده شید بلک اوت': 'https://farsgallery.com/product-category/curtains/shid/',
@@ -77,6 +80,12 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['ساعات کاری 🕒', 'آدرس و شماره تماس 📍']
 ], resize_keyboard=True)
 
+def convert_to_english_digits(text: str) -> str:
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩'
+    english_digits = '01234567890123456789'
+    translation_table = str.maketrans(persian_digits, english_digits)
+    return text.translate(translation_table)
+
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
@@ -103,7 +112,7 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
         f"امیدوارم حالتون عالی باشه. دیروز برای {curtain_type} استعلام قیمت گرفته بودید؛ "
         "خواستم پیگیری کنم ببینم تصمیمتون برای ثبت سفارش چی شد؟ 😊\n\n"
         "اگر سوالی در مورد رنگ‌بندی، کیفیت یا اندازه‌گیری دارید یا احتیاج به راهنمایی بیشتری هست، خوشحال می‌شیم کمکتون کنیم.\n\n"
-        "📞 شماره تماس مستقیم جهت مشاوره:\n09215657634\n\nدر خدمتتون هستیم! ✨"
+        "📞 شماره تماس مستقیم جهت مشاوره:\n09215657634\n\nدر خدمتتون هستیم! ✨" + BOT_FOOTER
     )
 
     try:
@@ -116,7 +125,7 @@ async def send_join_channel_message(update: Update):
         [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
         [InlineKeyboardButton("🔄 بررسی عضویت", callback_data="check_join")]
     ])
-    msg_text = "⚠️ دسترسی محدود است!\nلطفاً ابتدا در کانال عضو شوید."
+    msg_text = "⚠️ دسترسی محدود است!\nلطفاً ابتدا در کانال عضو شوید." + BOT_FOOTER
     if update.message:
         await update.message.reply_text(msg_text, reply_markup=keyboard)
     elif update.callback_query:
@@ -130,7 +139,7 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     ])
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید."
+        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید." + BOT_FOOTER
     )
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
@@ -187,27 +196,34 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     }
     context.user_data['curtain_icon'] = icon_map.get(curtain_type, curtain_type)
 
-    await query.message.reply_text("لطفاً عرض پرده را به سانتی‌متر وارد کنید (مثال: 150):")
+    await query.message.reply_text("📐 لطفاً عرض پرده را به سانتی‌متر وارد کنید (مثلاً: 150):")
     return GET_WIDTH
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
+    
     try:
         width = float(text)
+        if width <= 0:
+            raise ValueError()
         context.user_data['width'] = width
-        await update.message.reply_text("لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثال: 200):")
+        await update.message.reply_text("📐 لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثلاً: 200):")
         return GET_HEIGHT
     except ValueError:
-        await update.message.reply_text("⚠️ لطفاً عرض را به صورت عدد وارد کنید (مثال: 150).")
+        await update.message.reply_text("⚠️ لطفاً عرض را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 150).")
         return GET_WIDTH
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
+
     try:
         height = float(text)
-        width = context.user_data['width']
-        curtain_type = context.user_data['curtain_type']
-        curtain_icon = context.user_data['curtain_icon']
+        if height <= 0:
+            raise ValueError()
+
+        width = context.user_data.get('width', 100)
+        curtain_type = context.user_data.get('curtain_type', 'پرده زبرا')
+        curtain_icon = context.user_data.get('curtain_icon', curtain_type)
         
         unit_price = PRICES.get(curtain_type, 2000000)
         rules_applied = []
@@ -216,32 +232,32 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             min_height, min_area = 200, 2.0
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("به خاطر قانون پرده شید کمتر از 200، من 200 در نظر گرفتم.")
-            area = (width / 100) * (calc_height / 100)
+                rules_applied.append("ارتفاع زیر 200 سانتی‌متر، طبق استاندارد 200 محاسبه شد.")
+            area = (width / 100.0) * (calc_height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده شید، من کمتر از متراژ 2 همان 2 در نظر گرفتم.")
+                rules_applied.append("متراژ زیر 2 متر مربع، حداقل 2 متر محاسبه شد.")
 
         elif curtain_type == 'پرده زبرا':
             min_height, min_area = 150, 1.5
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("به خاطر قانون پرده زبرا کمتر از 150، من 150 در نظر گرفتم.")
-            area = (width / 100) * (calc_height / 100)
+                rules_applied.append("ارتفاع زیر 150 سانتی‌متر، حداقل 150 محاسبه شد.")
+            area = (width / 100.0) * (calc_height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده زبرا، من کمتر از متراژ 1.5 همان 1.5 در نظر گرفتم.")
+                rules_applied.append("متراژ زیر 1.5 متر مربع، حداقل 1.5 متر محاسبه شد.")
 
         elif curtain_type == 'پرده کرکره فلزی':
             min_area = 1.5
-            area = (width / 100) * (height / 100)
+            area = (width / 100.0) * (height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده کرکره فلزی، کمتر از 1.5 متر مربع همان 1.5 در نظر گرفتم.")
+                rules_applied.append("متراژ زیر 1.5 متر مربع، حداقل 1.5 متر محاسبه شد.")
 
-        total_price = int(calc_area * unit_price)
+        total_price = int(round(calc_area * unit_price))
         
-        rules_text = "\n".join([f"⚠️ {r}" for r in rules_applied])
+        rules_text = "\n".join([f"🔹 {r}" for r in rules_applied])
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
@@ -251,11 +267,12 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
             f"📐 عرض: {int(width)} سانتی‌متر | ارتفاع: {int(height)} سانتی‌متر\n"
-            f"🧮 متراژ: {calc_area:.2f} متر مربع\n"
-            f"{rules_text}"
+            f"🧮 متراژ محاسبه شده: {calc_area:.2f} متر مربع\n"
+            f"{rules_text}\n"
             f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
-            f"💵 **قیمت نهایی: {total_price:,} تومان**\n\n"
+            f"💵 قیمت نهایی: {total_price:,} تومان\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
+            f"{BOT_FOOTER}"
         )
 
         inline_kb = InlineKeyboardMarkup([
@@ -269,14 +286,15 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [
                 InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb"),
-                InlineKeyboardButton("شروع دوباره 🔄", callback_data="start_inquiry")
+                InlineKeyboardButton("محاسبه جدید 🔄", callback_data="start_inquiry")
             ],
             [
                 InlineKeyboardButton("خرید آنلاین 🛒", url=buy_url)
             ]
         ])
 
-        await update.message.reply_text(result_msg, reply_markup=inline_kb, parse_mode='Markdown')
+        # ارسال پیام بدون فرمت‌بندی Markdown برای جلوگیری از خطای پارسر تلگرام
+        await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
         if context.job_queue:
             context.job_queue.run_once(
@@ -288,11 +306,12 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return ConversationHandler.END
 
-    except ValueError:
-        await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
+    except Exception as e:
+        logging.error(f"Calculation error: {e}")
+        await update.message.reply_text("⚠️ لطفاً ارتفاع را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
-# --- سیستم آموزش اندازه‌گیری ---
+# --- سایر گزینه‌ها ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -333,57 +352,42 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     pos = data_parts[1]
 
     tools_text = (
-        "🛠 **انتخاب وسیله اندازه‌گیری:**\n"
-        "مترهای نواری فلزی بهترین وسیله برای اندازه‌گیری هستند. این نوارها قابلیت اندازه‌گیری دقیق سانتی‌متر و حتی میلی‌متری را دارند و امکان خطای اندازه‌گیری را کاهش می‌دهند. "
-        "نوارهای پارچه‌ای و مترهای خیاطی برای اندازه‌گیری پرده‌های پنجره مناسب نیستند و ممکن است اندکی خطا در اثر کشش ایجاد کنند.\n\n"
+        "🛠 انتخاب وسیله اندازه‌گیری:\n"
+        "مترهای نواری فلزی بهترین وسیله برای اندازه‌گیری هستند.\n\n"
     )
 
     if ctype == "zebra_shid":
         notes = (
-            "📌 **نکات مهم آماده‌سازی پرده زبرا و شید:**\n"
-            "۱. پرده‌های زبرا به دلیل مکانیزم بالابر نیاز به محاسبة خاصی دارند. شما باید این نکته را در نظر داشته باشید که پارچة پرده زبرا از هر طرف ۱.۵ سانتی‌متر از قاب کوچکتر است. برای مثال اگر عرض پرده مورد نیاز شما ۱۰۰ سانتی‌متر باشد، قاب پرده ۱۰۰ سانتی‌متر خواهد بود و پارچة پرده ۹۷ سانتی‌متر است.\n"
-            "۲. قاب بالای پرده‌های زبرا و شید حدود ۱۰ سانتی‌متر فضا نیاز دارد. اندازه قاب پرده از آن جهت اهمیت دارد که شما باید بالای پنجره خود حداقل ۱۰ سانتی‌متر فضا داشته باشید تا هنگام باز کردن پنجره محدودیتی نداشته باشید.\n\n"
+            "📌 نکات مهم آماده‌سازی پرده زبرا و شید:\n"
+            "۱. پارچة پرده زبرا از هر طرف ۱.۵ سانتی‌متر از قاب کوچکتر است.\n"
+            "۲. قاب بالای پرده‌های زبرا و شید حدود ۱۰ سانتی‌متر فضا نیاز دارد.\n\n"
         )
         if pos == "inside":
             detail = (
-                "📏 **آموزش اندازه‌گیری داخل چهارچوب (زبرا / شید / بلک‌اوت):**\n"
-                "۱. ابتدا لوازم لازم چون خودکار، کاغذ و متر فلزی را آماده کنید.\n"
-                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه نوبت (بالا، وسط و پایین) اندازه‌گیری کرده و **کوچک‌ترین عرض** را یادداشت کنید. سپس حداقل **یک سانتی‌متر** برای اطمینان از قرار گرفتن قاب در چهارچوب از عرض پرده کم کنید.\n"
-                "۳. بعد از اندازه‌گیری عرض، ارتفاع را اندازه‌گیری کرده و **بیست سانتی‌متر** اضافه کنید."
+                "📏 اندازه‌گیری داخل چهارچوب (زبرا / شید):\n"
+                "عرض را در ۳ نقطه بگیرید و کوچک‌ترین عدد را انتخاب کنید و ۱ سانتی‌متر کم کنید. به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
             )
         else:
             detail = (
-                "📏 **آموزش اندازه‌گیری خارج چهارچوب (زبرا / شید / بلک‌اوت):**\n"
-                "۱. ابتدا یک کاغذ، خودکار و متر برای اندازه‌گیری آماده کنید.\n"
-                "۲. عرض پنجره را اندازه‌گیری کنید و برای اینکه پرده به صورت کامل پنجره را بپوشاند، **پانزده سانتی‌متر** به عرض اندازه‌گیری شده اضافه کنید.\n"
-                "۳. بعد از اندازه‌گیری عرض، ارتفاع را اندازه‌گیری کرده و **بیست سانتی‌متر** به ارتفاع اضافه کنید تا از پوشش کامل پنجره اطمینان داشته باشید.\n"
-                "*(نکته: در صورتی که فضای بالای پنجره خارج چارچوب باشد و پایین پنجره خالی باشد، حداقل ۵ سانتی‌متر نیز به پایین پنجره اضافه می‌شود)*"
+                "📏 اندازه‌گیری خارج چهارچوب (زبرا / شید):\n"
+                "به عرض ۱۵ سانتی‌متر و به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
             )
-        final_msg = tools_text + notes + detail
+        final_msg = tools_text + notes + detail + BOT_FOOTER
 
-    else: # kerkere
+    else:
         if pos == "inside":
             detail = (
-                "📏 **آموزش اندازه‌گیری داخل چهارچوب / توکار (کرکره فلزی):**\n"
-                "۱. ابتدا دقت کنید در این حالت به دلیل نیاز به نصب پایه پرده به بالای درگاه پنجره، از استحکام این قسمت از دیوار جهت انجام سوراخ‌کاری با دریل برای پیچ کردن پایه‌ها مطمئن شوید.\n"
-                "۲. عرض و ارتفاع پنجره را در سه جا اندازه‌گیری کنید (چپ، وسط، راست برای ارتفاع و بالا، وسط، پایین برای عرض) و مبنا را **عدد کوچک‌تر** بگیرید.\n"
-                "۳. از مقدار عرض **۱ سانتی‌متر** جهت جا شدن پرده کم کنید و به ارتفاع **۵ سانتی‌متر** اضافه کنید تا پرده کف پنجره قرار گیرد.\n"
-                "۴. به جهت بازشو پنجره و جهت قرارگیری زنجیر بازشوی پرده دقت کنید؛ طناب و میله خلاف بازشو و سمت قسمت ثابت پنجره قرار می‌گیرد.\n\n"
-                "⚠️ *نکات:* ممکن است قاب پنجره دیده شود. دقت کنید دستگیره پنجره به پرده گیر نکند."
+                "📏 اندازه‌گیری داخل چهارچوب (کرکره فلزی):\n"
+                "از کوچک‌ترین عرض ۱ سانتی‌متر کم کنید و به ارتفاع ۵ سانتی‌متر اضافه کنید."
             )
         else:
             detail = (
-                "📏 **آموزش اندازه‌گیری خارج چهارچوب / روکار (کرکره فلزی):**\n"
-                "۱. همانند روش قبلی عرض و ارتفاع پنجره را در سه جا اندازه‌گیری کرده و مبنا را **عدد کوچک‌تر** بگیرید.\n"
-                "۲. **در عرض پرده:** جهت جلوگیری از عبور نور از کنار پرده در چپ یا راست، حداقل از هر طرف ۵ سانتی‌متر (در مجموع **۱۰ سانتی‌متر**) اضافه کنید.\n"
-                "۳. **در ارتفاع پرده:** اگر مانعی در پایین پرده مثل رادیاتور، پیشخوان یا کابینت قرار ندارد، جهت همپوشانی در حالت سایه و نیمه‌سایه حتماً **۲۰ سانتی‌متر** به ارتفاع اضافه کنید.\n"
-                "۴. فاصله بالای پرده (محل نصب پایه) باید به اندازه کافی جهت سوراخ‌کاری باشد. در این حالت می‌توانید پرده را به صورت دیواری یا سقفی نصب کنید."
+                "📏 اندازه‌گیری خارج چهارچوب (کرکره فلزی):\n"
+                "به عرض ۱۰ سانتی‌متر و به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
             )
-        final_msg = tools_text + detail
+        final_msg = tools_text + detail + BOT_FOOTER
 
-    await query.message.reply_text(final_msg, parse_mode='Markdown')
-
-# --- ثبت سفارش ---
+    await query.message.reply_text(final_msg)
 
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -416,12 +420,12 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
     admin_init_msg = (
-        "📥 سفارش / مشاوره جدید (مشخصات اولیه)\n\n"
+        "📥 سفارش / مشاوره جدید\n\n"
         f"👤 نام: {context.user_data.get('order_name')}\n"
         f"📞 تلفن: {context.user_data.get('order_phone')}\n"
         f"🪟 نوع پرده: {context.user_data.get('order_type')}\n"
         f"📍 آدرس: {context.user_data.get('order_address')}\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
+        f"👤 یوزرنیم: {user_handle}"
     )
     await context.bot.send_message(chat_id=ADMIN_ID, text=admin_init_msg)
 
@@ -431,8 +435,7 @@ async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
     
     await update.message.reply_text(
-        "✅ مشخصات شما با موفقیت ثبت شد.\n\n"
-        "لطفاً گام بعدی خود را انتخاب کنید:",
+        "✅ مشخصات شما با موفقیت ثبت شد.\nلطفاً گام بعدی خود را انتخاب کنید:",
         reply_markup=next_step_kb
     )
     return ORD_PHOTO_CHOICE
@@ -442,10 +445,7 @@ async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer()
     
     if query.data == "choice_send_photo":
-        await query.message.reply_text(
-            "📸 لطفاً تصویر پنجره مورد نظر را ارسال کنید:\n"
-            "⚠️ اگر چند تصویر دارید، همه را یکجا ارسال کنید."
-        )
+        await query.message.reply_text("📸 لطفاً تصویر پنجره مورد نظر را ارسال کنید:")
         return ORD_PHOTO
     else:
         await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
@@ -455,53 +455,43 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
-    caption_text = (
-        f"📸 تصویر ارسال شده توسط مشتری\n\n"
-        f"👤 نام: {context.user_data.get('order_name')}\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
-    )
+    caption_text = f"📸 تصویر جدید از مشتری\n👤 نام: {context.user_data.get('order_name')}\n👤 یوزرنیم: {user_handle}"
 
     if update.message.photo:
         photo_file_id = update.message.photo[-1].file_id
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text)
-        await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
     elif update.message.document and update.message.document.mime_type.startswith('image/'):
         doc_file_id = update.message.document.file_id
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
-        await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
     
-    await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
+    await update.message.reply_text("✅ عکس دریافت شد.\n📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
     return ORD_WIDTH
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_width'] = update.message.text
+    context.user_data['order_width'] = convert_to_english_digits(update.message.text.strip())
     await update.message.reply_text("📐 لطفاً ارتفاع پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
     return ORD_HEIGHT
 
 async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_height'] = update.message.text
+    context.user_data['order_height'] = convert_to_english_digits(update.message.text.strip())
     width_val = context.user_data.get('order_width')
     height_val = context.user_data.get('order_height')
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
     admin_dim_msg = (
-        "📐 ابعاد تکمیلی ثبت‌شده مشتری:\n\n"
+        "📐 ابعاد تکمیلی سفارش:\n\n"
         f"👤 نام: {context.user_data.get('order_name')}\n"
-        f"📏 عرض: {width_val} سانتی‌متر\n"
-        f"📏 ارتفاع: {height_val} سانتی‌متر\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
+        f"📏 عرض: {width_val} سانتی‌متر | ارتفاع: {height_val} سانتی‌متر\n"
+        f"👤 یوزرنیم: {user_handle}"
     )
     await context.bot.send_message(chat_id=ADMIN_ID, text=admin_dim_msg)
 
     await update.message.reply_text(
-        "✅ ابعاد و اندازه‌ها با موفقیت ثبت گردید.\n\n"
-        "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت.",
+        "✅ ابعاد با موفقیت ثبت شد.\n🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت." + BOT_FOOTER,
         reply_markup=PERSISTENT_KEYBOARD
     )
     return ConversationHandler.END
-
-# --- پنل مدیریت ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -509,7 +499,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 آمار ربات", callback_data="admin_stats")],
         [InlineKeyboardButton("💵 تغییر قیمت محصولات", callback_data="admin_change_price")],
-        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم)", callback_data="admin_users")]
+        [InlineKeyboardButton("👥 لیست کاربران", callback_data="admin_users")]
     ])
     await update.message.reply_text("⚙️ پنل مدیریت فارس گالری:", reply_markup=kb)
 
@@ -525,7 +515,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not USER_LIST:
             await query.message.reply_text("👥 هیچ کاربر فعالی ثبت نشده است.")
         else:
-            users_text = "👥 لیست یوزرنیم کاربران ربات:\n\n" + "\n".join([f"• {u}" for u in USER_LIST.values()])
+            users_text = "👥 لیست کاربران:\n\n" + "\n".join([f"• {u}" for u in USER_LIST.values()])
             await query.message.reply_text(users_text)
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
@@ -534,7 +524,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("پرده زبرا 🦓", callback_data="setp_پرده زبرا")],
             [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="setp_پرده کرکره فلزی")]
         ])
-        await query.message.reply_text("کدام محصول را جهت تغییر قیمت انتخاب می‌کنید؟", reply_markup=kb)
+        await query.message.reply_text("محصول را انتخاب کنید:", reply_markup=kb)
 
 async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -546,15 +536,14 @@ async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_T
 
 async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p_name = context.user_data.get('editing_product')
+    raw_text = convert_to_english_digits(update.message.text.strip())
     try:
-        new_val = int(update.message.text)
+        new_val = int(raw_text)
         PRICES[p_name] = new_val
-        await update.message.reply_text(f"✅ قیمت {p_name} با موفقیت به {new_val:,} تومان تغییر یافت.")
+        await update.message.reply_text(f"✅ قیمت {p_name} به {new_val:,} تومان تغییر یافت.")
     except ValueError:
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
-
-# --- ارسال آلبومی تصاویر نمونه‌کار ---
 
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -562,19 +551,14 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     p_name = query.data.replace("port_", "")
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     if not imgs:
-        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
     
-    media_group = []
-    for i, img_id in enumerate(imgs):
-        if i == 0:
-            media_group.append(InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}"))
-        else:
-            media_group.append(InputMediaPhoto(media=img_id))
-
+    media_group = [
+        InputMediaPhoto(media=img_id, caption=f"📸 نمونه کارهای {p_name}" + BOT_FOOTER if i == 0 else "")
+        for i, img_id in enumerate(imgs)
+    ]
     await update.effective_chat.send_media_group(media=media_group)
-
-# --- راهنمایی و پیشنهاد نوع پرده ---
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
@@ -588,53 +572,38 @@ async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     
     if query.data == 'sugg_office':
-        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است."
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری کرکره فلزی", callback_data="select_پرده کرکره فلزی")]
-        ])
+        msg = "پیشنهاد ما برای محیط‌های اداری: پرده کرکره فلزی 🏢 است." + BOT_FOOTER
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("📐 استعلام قیمت کرکره فلزی", callback_data="select_پرده کرکره فلزی")]])
     else:
-        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید 🪟** یا **پرده زبرا 🦓** است."
+        msg = "پیشنهاد ما برای مسکونی: پرده شید 🪟 یا زبرا 🦓 است." + BOT_FOOTER
         kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده زبرا", callback_data="select_پرده زبرا")],
-            [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده شید ساده", callback_data="select_پرده شید ساده")]
+            [InlineKeyboardButton("📐 استعلام قیمت پرده زبرا", callback_data="select_پرده زبرا")],
+            [InlineKeyboardButton("📐 استعلام قیمت پرده شید", callback_data="select_پرده شید ساده")]
         ])
-        
-    await query.message.reply_text(msg, reply_markup=kb, parse_mode='Markdown')
-
-# --- سایر متدها ---
+    await query.message.reply_text(msg, reply_markup=kb)
 
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     curtain_type = query.data.replace("colors_", "")
-
-    if curtain_type in ['پرده شید ساده', 'پرده شید بلک اوت']:
-        colors = ["⚪️ سفید", "🩶 طوسی", "🏷 کرم"]
-    elif curtain_type == 'پرده زبرا':
-        colors = ["⚪️ سفید", "🩶 طوسی", "🟤 قهوه‌ای"]
-    elif curtain_type == 'پرده کرکره فلزی':
-        colors = ["⚪️ سفید", "🩶 طوسی", "⬛️ مشکی"]
-    else:
-        colors = ["⚪️ سفید", "🩶 طوسی"]
-
+    colors = ["⚪️ سفید", "🩶 طوسی", "🏷 کرم / 🟤 قهوه‌ای"]
     color_buttons = [[InlineKeyboardButton(c, callback_data="color_selected")] for c in colors]
-    await query.message.reply_text("🎨 رنگ‌بندی‌های موجود:", reply_markup=InlineKeyboardMarkup(color_buttons))
+    await query.message.reply_text(f"🎨 رنگ‌بندی‌های موجود برای {curtain_type}:", reply_markup=InlineKeyboardMarkup(color_buttons))
 
 async def color_selected_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer("رنگ انتخاب شد!")
-    await query.message.reply_text("✨ جهت ثبت نهایی سفارش می‌توانید از دکمه «ثبت سفارش و مشاوره مستقیم» استفاده کنید.")
+    await query.message.reply_text("✨ جهت ثبت سفارش می‌توانید از گزینه «ثبت سفارش و مشاوره مستقیم» استفاده کنید." + BOT_FOOTER)
 
 async def start_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     msg = (
-        "لطفاً نوع پرده مورد نظر خود را جهت ورود به لینک خرید انتخاب کنید:\n\n"
-        f"1️⃣ پرده شید ساده\n🔗 {PRODUCT_LINKS['پرده شید ساده']}\n\n"
-        f"2️⃣ پرده شید بلک اوت\n🔗 {PRODUCT_LINKS['پرده شید بلک اوت']}\n\n"
-        f"3️⃣ پرده زبرا\n🔗 {PRODUCT_LINKS['پرده زبرا']}\n\n"
-        f"4️⃣ پرده کرکره فلزی\n🔗 {PRODUCT_LINKS['پرده کرکره فلزی']}"
+        "لینک‌های خرید مستقیم از سایت:\n\n"
+        f"1️⃣ پرده شید ساده: {PRODUCT_LINKS['پرده شید ساده']}\n"
+        f"2️⃣ پرده شید بلک اوت: {PRODUCT_LINKS['پرده شید بلک اوت']}\n"
+        f"3️⃣ پرده زبرا: {PRODUCT_LINKS['پرده زبرا']}\n"
+        f"4️⃣ پرده کرکره فلزی: {PRODUCT_LINKS['پرده کرکره فلزی']}" + BOT_FOOTER
     )
     await query.message.reply_text(msg, disable_web_page_preview=True)
 
@@ -645,38 +614,33 @@ async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")],
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")]
     ])
-    await update.message.reply_text("🖼 نمونه کار کدام محصول را می‌خواهید مشاهده کنید؟", reply_markup=kb)
+    await update.message.reply_text("🖼 نمونه کار کدام محصول را می‌خواهید؟", reply_markup=kb)
 
 async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
     if update.callback_query:
         await update.callback_query.answer()
     text = (
-        "🚚 محاسبه هزینه نصب، اندازه‌گیری و ارسال:\n\n"
-        "📏 هزینه اندازه‌گیری (شیراز): 500,000 تومان\n"
-        "🛠 هزینه نصب: هر درگاه 500,000 تومان\n"
-        "🚕 کرایه حمل (شیراز): 150,000 تومان\n"
-        "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
+        "🚚 هزینه خدمات:\n\n"
+        "📏 اندازه‌گیری (شیراز): 500,000 تومان\n"
+        "🛠 نصب: هر درگاه 500,000 تومان\n"
+        "🚕 حمل (شیراز): 150,000 تومان\n"
+        "📦 ارسال شهرستان: تیپاکس (پس‌کرایه)" + BOT_FOOTER
     )
     await msg_target.reply_text(text)
 
 async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = (
-        "📍 آدرس و شماره تماس:\n\n"
-        "شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه یک، مجموعه گالری هنری ایران دکوراسیون (فارس گالری)\n\n"
-        "📞 شماره تماس: 07136277172"
-    )
+    msg = "📍 آدرس: شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه ۱، فارس گالری\n📞 تلفن: 07136277172" + BOT_FOOTER
     await update.message.reply_text(msg)
 
 async def show_hours(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🕒 ساعات کاری مجموعه:\n\n☀️ صبح: از 09:00 تا 13:00\n🌙 عصر: از 17:00 تا 21:00"
+    msg = "🕒 ساعات کاری:\n☀️ صبح: 09:00 تا 13:00\n🌙 عصر: 17:00 تا 21:00" + BOT_FOOTER
     await update.message.reply_text(msg)
 
 async def show_website(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "🌐 وب سایت خرید آنلاین:\nwww.FarsGallery.com"
+    msg = "🌐 وب سایت رسمی:\nwww.FarsGallery.com" + BOT_FOOTER
     await update.message.reply_text(msg)
 
-# مدیریت لغو هوشمند دکمه‌ها
 async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == 'شروع 🏠':
@@ -699,17 +663,12 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
         await calc_services(update, context)
     return ConversationHandler.END
 
-# تابع تنظیم دستورات منوی تلگرام اختصاصی برای ادمین
 async def post_init(application):
-    admin_commands = [
-        BotCommand("start", "شروع مجدد ربات"),
-        BotCommand("admin", "ورود به پنل مدیریت")
-    ]
     try:
-        await application.bot.set_my_commands(
-            admin_commands, 
-            scope=BotCommandScopeChat(chat_id=ADMIN_ID)
-        )
+        await application.bot.set_my_commands([
+            BotCommand("start", "شروع مجدد ربات"),
+            BotCommand("admin", "ورود به پنل مدیریت")
+        ], scope=BotCommandScopeChat(chat_id=ADMIN_ID))
     except Exception as e:
         logging.error(f"Failed to set admin commands: {e}")
 
@@ -727,7 +686,12 @@ def main():
             GET_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_width)],
             GET_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_height)]
         },
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False,
+        conversation_timeout=180
     )
 
     direct_order_conv = ConversationHandler(
@@ -740,22 +704,27 @@ def main():
             ORD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_phone)],
             ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_type)],
             ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_address)],
-            ORD_PHOTO_CHOICE: [
-                CallbackQueryHandler(handle_photo_choice, pattern="^(choice_send_photo|choice_send_dim)$")
-            ],
-            ORD_PHOTO: [
-                MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo)
-            ],
+            ORD_PHOTO_CHOICE: [CallbackQueryHandler(handle_photo_choice, pattern="^(choice_send_photo|choice_send_dim)$")],
+            ORD_PHOTO: [MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo)],
             ORD_WIDTH: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_width)],
             ORD_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_height)]
         },
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False,
+        conversation_timeout=300
     )
 
     admin_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(select_price_to_change, pattern="^setp_")],
         states={SET_PR_VAL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), save_new_price)]},
-        fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
+        fallbacks=[
+            CommandHandler('start', start_command),
+            MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
+        ],
+        per_message=False
     )
 
     app.add_handler(CommandHandler('start', start_command))
