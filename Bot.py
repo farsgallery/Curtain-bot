@@ -528,7 +528,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# تابع کپی مستقیم آلبوم‌ها از کانال تلگرام
+# تابع بهینه‌شده برای ارسال آلبوم‌های عکس
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -539,15 +539,24 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
     
-    for msg_id in post_ids:
-        try:
-            await context.bot.copy_message(
-                chat_id=update.effective_chat.id,
-                from_chat_id=CHANNEL_USERNAME,
-                message_id=msg_id
-            )
-        except Exception as e:
-            logging.error(f"Error copying message {msg_id} from {CHANNEL_USERNAME}: {e}")
+    try:
+        # ارسال آلبومی یکجای عکس‌ها از کانال
+        await context.bot.forward_messages(
+            chat_id=update.effective_chat.id,
+            from_chat_id=CHANNEL_USERNAME,
+            message_ids=post_ids
+        )
+    except Exception as e:
+        logging.error(f"Error forwarding album: {e}")
+        for msg_id in post_ids:
+            try:
+                await context.bot.copy_message(
+                    chat_id=update.effective_chat.id,
+                    from_chat_id=CHANNEL_USERNAME,
+                    message_id=msg_id
+                )
+            except Exception as ex:
+                logging.error(f"Error copying message {msg_id}: {ex}")
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
