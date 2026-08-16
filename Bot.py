@@ -5,7 +5,7 @@ import jdatetime
 import http.server
 import socketserver
 import threading
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, BotCommandScopeChat
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, BotCommandScopeChat, InputMediaPhoto
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, 
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
@@ -33,7 +33,6 @@ PRICES = {
 
 USER_LIST = {} 
 
-# شماره پست‌های آلبوم در کانال تلگرام شما
 PORTFOLIO_POSTS = {
     'پرده زبرا': [1283, 1273, 1263],
     'پرده شید ساده': [1295, 1285],
@@ -528,7 +527,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# تابع بهینه‌شده برای ارسال آلبوم‌های عکس
+# ارسال تضمینی به صورت آلبوم متصل
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -539,24 +538,30 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
     
-    try:
-        # ارسال آلبومی یکجای عکس‌ها از کانال
-        await context.bot.forward_messages(
-            chat_id=update.effective_chat.id,
-            from_chat_id=CHANNEL_USERNAME,
-            message_ids=post_ids
-        )
-    except Exception as e:
-        logging.error(f"Error forwarding album: {e}")
-        for msg_id in post_ids:
-            try:
-                await context.bot.copy_message(
-                    chat_id=update.effective_chat.id,
-                    from_chat_id=CHANNEL_USERNAME,
-                    message_id=msg_id
-                )
-            except Exception as ex:
-                logging.error(f"Error copying message {msg_id}: {ex}")
+    media_group = []
+    for msg_id in post_ids:
+        try:
+            msg = await context.bot.forward_message(
+                chat_id=ADMIN_ID,
+                from_chat_id=CHANNEL_USERNAME,
+                message_id=msg_id
+            )
+            if msg.photo:
+                photo_id = msg.photo[-1].file_id
+                media_group.append(InputMediaPhoto(media=photo_id))
+            await context.bot.delete_message(chat_id=ADMIN_ID, message_id=msg.message_id)
+        except Exception as e:
+            logging.error(f"Error fetching photo for album: {e}")
+
+    if media_group:
+        try:
+            await context.bot.send_media_group(
+                chat_id=update.effective_chat.id,
+                media=media_group
+            )
+        except Exception as e:
+            logging.error(f"Error sending media group: {e}")
+            await query.message.reply_text("⚠️ خطا در ارسال آلبوم عکس.")
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
