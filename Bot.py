@@ -5,7 +5,7 @@ import jdatetime
 import http.server
 import socketserver
 import threading
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, BotCommand, BotCommandScopeChat
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, 
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
@@ -574,7 +574,7 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.effective_chat.send_media_group(media=media_group)
 
-# --- راهنمایی و پیشنهاد نوع پرده (به‌روزرسانی شده) ---
+# --- راهنمایی و پیشنهاد نوع پرده ---
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
@@ -699,9 +699,23 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
         await calc_services(update, context)
     return ConversationHandler.END
 
+# تابع تنظیم دستورات منوی تلگرام اختصاصی برای ادمین
+async def post_init(application):
+    admin_commands = [
+        BotCommand("start", "شروع مجدد ربات"),
+        BotCommand("admin", "ورود به پنل مدیریت")
+    ]
+    try:
+        await application.bot.set_my_commands(
+            admin_commands, 
+            scope=BotCommandScopeChat(chat_id=ADMIN_ID)
+        )
+    except Exception as e:
+        logging.error(f"Failed to set admin commands: {e}")
+
 def main():
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAEBL9XPR9JKGZoLyw4PPIAtV2UFPAQ6lkc")
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
     MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
 
