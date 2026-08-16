@@ -15,7 +15,6 @@ ADMIN_ID = 333050909
 ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
 
-# فوتر بدون کاراکترهای خراب‌کننده فرمت
 BOT_FOOTER = "\n\nمحاسبه قیمت پرده در ربات تلگرام فارس گالری\n@farsgallery_bot"
 
 PRODUCT_LINKS = {
@@ -232,32 +231,32 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             min_height, min_area = 200, 2.0
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("ارتفاع زیر 200 سانتی‌متر، طبق استاندارد 200 محاسبه شد.")
+                rules_applied.append("⚠️ طبق قانون محاسباتی پرده شید، ارتفاع زیر ۲۰۰ سانتی‌متر، حداقل ۲۰۰ سانتی‌متر محاسبه می‌شود.")
             area = (width / 100.0) * (calc_height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("متراژ زیر 2 متر مربع، حداقل 2 متر محاسبه شد.")
+                rules_applied.append("⚠️ طبق قانون محاسباتی پرده شید، متراژ زیر ۲ متر مربع، حداقل ۲ متر مربع محاسبه می‌شود.")
 
         elif curtain_type == 'پرده زبرا':
             min_height, min_area = 150, 1.5
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("ارتفاع زیر 150 سانتی‌متر، حداقل 150 محاسبه شد.")
+                rules_applied.append("⚠️ طبق قانون محاسباتی پرده زبرا، ارتفاع زیر ۱۵۰ سانتی‌متر، حداقل ۱۵۰ سانتی‌متر محاسبه می‌شود.")
             area = (width / 100.0) * (calc_height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("متراژ زیر 1.5 متر مربع، حداقل 1.5 متر محاسبه شد.")
+                rules_applied.append("⚠️ طبق قانون محاسباتی پرده زبرا، متراژ زیر ۱.۵ متر مربع، حداقل ۱.۵ متر مربع محاسبه می‌شود.")
 
         elif curtain_type == 'پرده کرکره فلزی':
             min_area = 1.5
             area = (width / 100.0) * (height / 100.0)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("متراژ زیر 1.5 متر مربع، حداقل 1.5 متر محاسبه شد.")
+                rules_applied.append("⚠️ طبق قانون محاسباتی کرکره فلزی، متراژ زیر ۱.۵ متر مربع، حداقل ۱.۵ متر مربع محاسبه می‌شود.")
 
         total_price = int(round(calc_area * unit_price))
         
-        rules_text = "\n".join([f"🔹 {r}" for r in rules_applied])
+        rules_text = "\n".join([f"{r}" for r in rules_applied])
         if rules_text:
             rules_text = "\n" + rules_text + "\n"
 
@@ -271,7 +270,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{rules_text}\n"
             f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
             f"💵 قیمت نهایی: {total_price:,} تومان\n\n"
-            f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
+            f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روز کاری"
             f"{BOT_FOOTER}"
         )
 
@@ -293,7 +292,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        # ارسال پیام بدون فرمت‌بندی Markdown برای جلوگیری از خطای پارسر تلگرام
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
         if context.job_queue:
@@ -310,8 +308,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Calculation error: {e}")
         await update.message.reply_text("⚠️ لطفاً ارتفاع را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 200).")
         return GET_HEIGHT
-
-# --- سایر گزینه‌ها ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
