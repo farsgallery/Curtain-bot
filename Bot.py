@@ -5,12 +5,18 @@ import jdatetime
 import http.server
 import socketserver
 import threading
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, BotCommandScopeChat, InputMediaPhoto
+from telegram import (
+    Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton,
+    BotCommand, BotCommandScopeChat, InputMediaPhoto
+)
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, 
     CallbackQueryHandler, ConversationHandler, filters, ContextTypes
 )
 
+# ---------------------------------------------------------
+# پیکربندی اولیه و ثوابت
+# ---------------------------------------------------------
 ADMIN_ID = 333050909  
 ADMIN_USERNAME = "@arhnh"
 CHANNEL_USERNAME = "@irandecoration_gallery"
@@ -33,6 +39,7 @@ PRICES = {
 
 USER_LIST = {} 
 
+# شماره پست‌های کانال جهت ارسال آلبوم نمونه کار به مشتری
 PORTFOLIO_POSTS = {
     'پرده زبرا': [1283, 1273, 1263],
     'پرده شید ساده': [1295, 1285],
@@ -40,6 +47,9 @@ PORTFOLIO_POSTS = {
     'پرده شید بلک اوت': [1324]
 }
 
+# ---------------------------------------------------------
+# سرور مجازی برای نگهداری ربات بر روی سرورهای ابری (تست سلامت)
+# ---------------------------------------------------------
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
     handler = http.server.SimpleHTTPRequestHandler
@@ -53,18 +63,24 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# ---------------------------------------------------------
+# وضعیت‌های ConversationHandler
+# ---------------------------------------------------------
 GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO_CHOICE, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
-    ['راهنمایی و پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
+    ['پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
     ['ثبت سفارش و مشاوره مستقیم 📝', 'آموزش اندازه‌گیری 📐'],
     ['هزینه نصب و ارسال 🚚', 'وب سایت خرید آنلاین 🌐'],
     ['ساعات کاری 🕒', 'آدرس و شماره تماس 📍']
 ], resize_keyboard=True)
 
+# ---------------------------------------------------------
+# توابع کمکی
+# ---------------------------------------------------------
 def convert_to_english_digits(text: str) -> str:
     persian_digits = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩'
     english_digits = '01234567890123456789'
@@ -82,6 +98,9 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
         logging.error(f"Error checking channel membership: {e}")
         return True
 
+# ---------------------------------------------------------
+# سیستم یادآوری و پیگیری خودکار (۲۴ ساعت بعد)
+# ---------------------------------------------------------
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
     user_id = job.chat_id
@@ -105,6 +124,9 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Failed to send follow-up message to {user_id}: {e}")
 
+# ---------------------------------------------------------
+# پیام‌ها و منوهای اصلی
+# ---------------------------------------------------------
 async def send_join_channel_message(update: Update):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 عضویت در کانال ما", url=f"https://t.me/{CHANNEL_USERNAME.replace('@', '')}")],
@@ -154,6 +176,9 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
 
+# ---------------------------------------------------------
+# استعلام قیمت و محاسبات آنلاین
+# ---------------------------------------------------------
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -254,8 +279,8 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📐 عرض: {int(width)} سانتی‌متر | ارتفاع: {int(height)} سانتی‌متر\n"
             f"🧮 متراژ محاسبه شده: {calc_area:.2f} متر مربع\n"
             f"{rules_text}\n"
-            f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
-            f"💵 قیمت نهایی: {total_price:,} تومان\n\n"
+            f"🪙 قیمت هر متر مربع: {unit_price:,} تومان\n\n"
+            f"💵 قیمت نهایی با همه لوازم پرده: {total_price:,} تومان\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روز کاری"
             f"{BOT_FOOTER}"
         )
@@ -280,6 +305,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
+        # تنظیم پیگیری ۲۴ ساعته
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -295,6 +321,9 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ لطفاً ارتفاع را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
+# ---------------------------------------------------------
+# بخش آموزش اندازه‌گیری (بر اساس فایل‌های مستندات)
+# ---------------------------------------------------------
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
     if update.callback_query:
@@ -334,43 +363,52 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     pos = data_parts[1]
 
     tools_text = (
-        "🛠 انتخاب وسیله اندازه‌گیری:\n"
-        "مترهای نواری فلزی بهترین وسیله برای اندازه‌گیری هستند.\n\n"
+        "🛠 **تجهیزات و نکات عمومی اندازه‌گیری:**\n"
+        "• حتماً از **متر نواری فلزی** استفاده کنید (مترهای خیاطی پارچه‌ای به دلیل کشسانی باعث خطا می‌شوند).\n\n"
     )
 
     if ctype == "zebra_shid":
         notes = (
-            "📌 نکات مهم آماده‌سازی پرده زبرا و شید:\n"
-            "۱. پارچة پرده زبرا از هر طرف ۱.۵ سانتی‌متر از قاب کوچکتر است.\n"
-            "۲. قاب بالای پرده‌های زبرا و شید حدود ۱۰ سانتی‌متر فضا نیاز دارد.\n\n"
+            "📌 **نکات اختصاصی پرده زبرا و شید:**\n"
+            "۱. پارچه پرده زبرا از هر طرف ۱.۵ سانتی‌متر از قاب کوچکتر است (پارچه جمعاً ۳ سانتی‌متر از قاب کمتر است).\n"
+            "۲. قاب بالای پرده حداقل به **۱۰ سانتی‌متر فضا** در بالای پنجره نیاز دارد تا هنگام باز کردن بازشوی پنجره گیر نکند.\n\n"
         )
         if pos == "inside":
             detail = (
-                "📏 اندازه‌گیری داخل چهارچوب (زبرا / شید):\n"
-                "عرض را در ۳ نقطه بگیرید و کوچک‌ترین عدد را انتخاب کنید و ۱ سانتی‌متر کم کنید. به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
+                "📏 **آموزش اندازه‌گیری داخل چهارچوب (توکار) - زبرا و شید:**\n"
+                "۱. عرض چهارچوب را در ۳ نقطه (بالا، وسط، پایین) بگیرید و **کوچک‌ترین عدد** را یادداشت کنید.\n"
+                "۲. از کوچک‌ترین عرض، **۱ سانتی‌متر کم کنید** (عرض نهایی = عرض - ۱ cm).\n"
+                "۳. ارتفاع پنجره را اندازه بگیرید و **۲۰ سانتی‌متر اضافه کنید** (ارتفاع نهایی = ارتفاع + ۲۰ cm)."
             )
         else:
             detail = (
-                "📏 اندازه‌گیری خارج چهارچوب (زبرا / شید):\n"
-                "به عرض ۱۵ سانتی‌متر و به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
+                "📏 **آموزش اندازه‌گیری خارج چهارچوب (روکار) - زبرا و شید:**\n"
+                "۱. عرض پنجره را اندازه بگیرید و **۱۵ سانتی‌متر به آن اضافه کنید** (عرض نهایی = عرض + ۱۵ cm).\n"
+                "۲. ارتفاع پنجره را اندازه بگیرید و **۲۰ سانتی‌متر به آن اضافه کنید** (ارتفاع نهایی = ارتفاع + ۲۰ cm)."
             )
         final_msg = tools_text + notes + detail + BOT_FOOTER
 
     else:
         if pos == "inside":
             detail = (
-                "📏 اندازه‌گیری داخل چهارچوب (کرکره فلزی):\n"
-                "از کوچک‌ترین عرض ۱ سانتی‌متر کم کنید و به ارتفاع ۵ سانتی‌متر اضافه کنید."
+                "📏 **آموزش اندازه‌گیری داخل چهارچوب (توکار) - کرکره فلزی:**\n"
+                "۱. عرض چهارچوب را اندازه بگیرید و **۱ سانتی‌متر کم کنید** (عرض نهایی = عرض - ۱ cm).\n"
+                "۲. ارتفاع چهارچوب را اندازه بگیرید و **۵ سانتی‌متر اضافه کنید** (ارتفاع نهایی = ارتفاع + ۵ cm).\n"
+                "🔹 *نکته:* برای نصب توکار کرکره فلزی، چهارچوب پنجره باید حداقل **۵ سانتی‌متر عمق** داشته باشد."
             )
         else:
             detail = (
-                "📏 اندازه‌گیری خارج چهارچوب (کرکره فلزی):\n"
-                "به عرض ۱۰ سانتی‌متر و به ارتفاع ۲۰ سانتی‌متر اضافه کنید."
+                "📏 **آموزش اندازه‌گیری خارج چهارچوب (روکار) - کرکره فلزی:**\n"
+                "۱. عرض چهارچوب را اندازه بگیرید و **۱۰ سانتی‌متر اضافه کنید** (عرض نهایی = عرض + ۱۰ cm).\n"
+                "۲. ارتفاع چهارچوب را اندازه بگیرید و **۲۰ سانتی‌متر اضافه کنید** (ارتفاع نهایی = ارتفاع + ۲۰ cm)."
             )
         final_msg = tools_text + detail + BOT_FOOTER
 
     await query.message.reply_text(final_msg)
 
+# ---------------------------------------------------------
+# ثبت سفارش و مشاوره مستقیم
+# ---------------------------------------------------------
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
     await msg_target.reply_text("📝 جهت ثبت سفارش یا مشاوره، لطفاً نام و نام خانوادگی خود را وارد کنید:")
@@ -475,6 +513,9 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+# ---------------------------------------------------------
+# پنل مدیریت ربات
+# ---------------------------------------------------------
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -527,7 +568,9 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# ارسال تضمینی به صورت آلبوم متصل
+# ---------------------------------------------------------
+# نمونه‌کارها (ارسال آلبوم بر اساس پست‌های کانال)
+# ---------------------------------------------------------
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -563,6 +606,9 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
             logging.error(f"Error sending media group: {e}")
             await query.message.reply_text("⚠️ خطا در ارسال آلبوم عکس.")
 
+# ---------------------------------------------------------
+# خدمات دیگر و منوهای ثانویه
+# ---------------------------------------------------------
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🏢 اداری و تجاری", callback_data="sugg_office")],
@@ -648,7 +694,7 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
     text = update.message.text
     if text == 'شروع 🏠':
         await start_command(update, context)
-    elif text == 'راهنمایی و پیشنهاد نوع پرده 💡':
+    elif text == 'پیشنهاد نوع پرده 💡':
         await suggest_curtain(update, context)
     elif text == 'وب سایت خرید آنلاین 🌐':
         await show_website(update, context)
@@ -675,11 +721,14 @@ async def post_init(application):
     except Exception as e:
         logging.error(f"Failed to set admin commands: {e}")
 
+# ---------------------------------------------------------
+# تابع اصلی اجرای ربات (main)
+# ---------------------------------------------------------
 def main():
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAEBL9XPR9JKGZoLyw4PPIAtV2UFPAQ6lkc")
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
-    MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
+    MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
 
     price_conv_handler = ConversationHandler(
         entry_points=[
@@ -738,7 +787,7 @@ def main():
     app.add_handler(admin_conv)
     
     app.add_handler(MessageHandler(filters.Regex('^شروع 🏠$'), start_command))
-    app.add_handler(MessageHandler(filters.Regex('^راهنمایی و پیشنهاد نوع پرده 💡$'), suggest_curtain))
+    app.add_handler(MessageHandler(filters.Regex('^پیشنهاد نوع پرده 💡$'), suggest_curtain))
     app.add_handler(MessageHandler(filters.Regex('^وب سایت خرید آنلاین 🌐$'), show_website))
     app.add_handler(MessageHandler(filters.Regex('^ساعات کاری 🕒$'), show_hours))
     app.add_handler(MessageHandler(filters.Regex('^آدرس و شماره تماس 📍$'), show_contact))
