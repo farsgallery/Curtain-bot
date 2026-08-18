@@ -39,12 +39,12 @@ PRICES = {
 
 USER_LIST = {} 
 
-# شماره پست‌های کانال جهت ارسال آلبوم نمونه کار به مشتری
+# لیست شماره پست‌های کانال تلگرام استخراج‌شده از فایل اکسل
 PORTFOLIO_POSTS = {
-    'پرده زبرا': [1283, 1273, 1263],
-    'پرده شید ساده': [1295, 1285],
-    'پرده کرکره فلزی': [1315, 1305],
-    'پرده شید بلک اوت': [1324]
+    'پرده زبرا': list(range(1263, 1285)),       # پست‌های ۱۲۶۳ تا ۱۲۸۴
+    'پرده شید ساده': list(range(1285, 1305)),   # پست‌های ۱۲۸۵ تا ۱۳۰۴
+    'پرده کرکره فلزی': list(range(1305, 1324)), # پست‌های ۱۳۰۵ تا ۱۳۲۳
+    'پرده شید بلک اوت': list(range(1324, 1334)) # پست‌های ۱۳۲۴ تا ۱۳۳۳
 }
 
 # ---------------------------------------------------------
@@ -322,7 +322,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return GET_HEIGHT
 
 # ---------------------------------------------------------
-# بخش آموزش اندازه‌گیری (بر اساس فایل‌های مستندات)
+# بخش آموزش اندازه‌گیری
 # ---------------------------------------------------------
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -569,7 +569,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # ---------------------------------------------------------
-# نمونه‌کارها (ارسال آلبوم بر اساس پست‌های کانال)
+# نمونه‌کارها (ارسال آلبوم بر اساس پست‌های کانال به صورت آلبوم/گروهی)
 # ---------------------------------------------------------
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -580,8 +580,10 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     if not post_ids:
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است." + BOT_FOOTER)
         return
-    
-    media_group = []
+
+    await query.message.reply_text(f"🖼 در حال دریافت و ارسال آلبوم نمونه‌کارهای {p_name} ... لطفاً شکیبا باشید.")
+
+    fetched_photos = []
     for msg_id in post_ids:
         try:
             msg = await context.bot.forward_message(
@@ -590,21 +592,35 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
                 message_id=msg_id
             )
             if msg.photo:
-                photo_id = msg.photo[-1].file_id
-                media_group.append(InputMediaPhoto(media=photo_id))
+                fetched_photos.append(msg.photo[-1].file_id)
             await context.bot.delete_message(chat_id=ADMIN_ID, message_id=msg.message_id)
         except Exception as e:
-            logging.error(f"Error fetching photo for album: {e}")
+            logging.error(f"Error fetching photo for msg_id {msg_id}: {e}")
 
-    if media_group:
-        try:
-            await context.bot.send_media_group(
-                chat_id=update.effective_chat.id,
-                media=media_group
-            )
-        except Exception as e:
-            logging.error(f"Error sending media group: {e}")
-            await query.message.reply_text("⚠️ خطا در ارسال آلبوم عکس.")
+    if not fetched_photos:
+        await query.message.reply_text("⚠️ متأسفانه تصاویری یافت نشد.")
+        return
+
+    chunk_size = 10
+    for i in range(0, len(fetched_photos), chunk_size):
+        chunk = fetched_photos[i:i + chunk_size]
+        if len(chunk) >= 2:
+            media_group = [InputMediaPhoto(media=photo_id) for photo_id in chunk]
+            try:
+                await context.bot.send_media_group(
+                    chat_id=update.effective_chat.id,
+                    media=media_group
+                )
+            except Exception as e:
+                logging.error(f"Error sending media group: {e}")
+        elif len(chunk) == 1:
+            try:
+                await context.bot.send_photo(
+                    chat_id=update.effective_chat.id,
+                    photo=chunk[0]
+                )
+            except Exception as e:
+                logging.error(f"Error sending photo: {e}")
 
 # ---------------------------------------------------------
 # خدمات دیگر و منوهای ثانویه
