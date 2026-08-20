@@ -693,7 +693,7 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await msg_target.reply_text(text)
 
 async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "📍 آدرس: شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه ۱، گالری هنری ایران دکوراسیون\n📞 تلفن: 07136277172" + BOT_FOOTER
+    msg = "📍 آدرس: شیراز، خیابان قصردشت، چهارراه عفیف‌آباد، ابتدای بلوار آوینی، نبش کوچه ۱، فارس گالری، گالری هنری ایران دکوراسیون\n📞 تلفن: 07136277172" + BOT_FOOTER
     await update.message.reply_text(msg)
 
 async def show_hours(update: Update, context: ContextTypes.DEFAULT_TYPE):
