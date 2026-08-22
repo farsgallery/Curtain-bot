@@ -98,7 +98,7 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
         return True
 
 # ---------------------------------------------------------
-# سیستم یادآوری و پیگیری خودکار
+# سیستم یادآوری و پیگیری خودکار (JobQueue)
 # ---------------------------------------------------------
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
@@ -274,8 +274,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rules_text = "\n" + rules_text + "\n"
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
-
-        # تعیین شناسه آموزش اندازه‌گیری اختصاصی جهت جلوگیری از خطای دکمه
         guide_code = "kerkere" if curtain_type == "پرده کرکره فلزی" else "zebra_shid"
 
         result_msg = (
@@ -310,7 +308,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
-        # تنظیم تایمر یادآوری ۳۰ ثانیه‌ای
+        # ارسال یادآوری ۳۰ ثانیه بعد
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -319,8 +317,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 user_id=update.effective_user.id,
                 data={'curtain_type': curtain_type}
             )
-        else:
-            logging.error("JobQueue در دسترس نیست! مطمئن شوید python-telegram-bot[job-queue] نصب شده است.")
 
         return ConversationHandler.END
 
