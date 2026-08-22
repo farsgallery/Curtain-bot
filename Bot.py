@@ -102,8 +102,8 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
 # ---------------------------------------------------------
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
-    user_id = job.chat_id
-    curtain_type = job.data.get('curtain_type', 'پرده')
+    chat_id = job.chat_id
+    curtain_type = job.data.get('curtain_type', 'پرده') if job.data else 'پرده'
 
     followup_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb")],
@@ -113,16 +113,16 @@ async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     text = (
         f"🗓 تاریخ: {get_jalali_date()}\n\n"
         "سلام روزتون بخیر🌸\n\n"
-        f"امیدوارم حالتون عالی باشه. دیروز برای {curtain_type} استعلام قیمت گرفته بودید؛ "
+        f"امیدوارم حالتون عالی باشه. برای {curtain_type} استعلام قیمت گرفته بودید؛ "
         "خواستم پیگیری کنم ببینم تصمیمتون برای ثبت سفارش چی شد؟ 😊\n\n"
         "اگر سوالی در مورد رنگ‌بندی، کیفیت یا اندازه‌گیری دارید یا احتیاج به راهنمایی بیشتری هست، خوشحال می‌شیم کمکتون کنیم.\n\n"
         "📞 شماره تماس مستقیم جهت مشاوره:\n09215657634\n\nدر خدمتتون هستیم! ✨" + BOT_FOOTER
     )
 
     try:
-        await context.bot.send_message(chat_id=user_id, text=text, reply_markup=followup_kb)
+        await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=followup_kb)
     except Exception as e:
-        logging.error(f"Failed to send follow-up message to {user_id}: {e}")
+        logging.error(f"Failed to send follow-up message to {chat_id}: {e}")
 
 # ---------------------------------------------------------
 # پیام‌ها و منوهای اصلی
@@ -307,11 +307,13 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
+        # تنظیم یادآوری ۳۰ ثانیه‌ای جهت تست
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
-                when=86400,
+                when=30,
                 chat_id=update.effective_chat.id,
+                user_id=update.effective_user.id,
                 data={'curtain_type': curtain_type}
             )
 
@@ -330,7 +332,6 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
     if update.callback_query:
         await update.callback_query.answer()
 
-    # عنوان دکمه بر اساس درخواست جدید تغییر یافت
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("پرده شیدرول ساده - شیدرول بلک اوت - زبرا 🪟", callback_data="mtype_zebra_shid")],
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="mtype_kerkere")]
@@ -341,9 +342,9 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     
-    raw_type = query.data.replace("mtype_", "")
+    raw_type = query.data.replace("mtype_", "").strip()
     
-    if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا", "پرده زبرا و شید"]:
+    if any(k in raw_type for k in ["zebra", "shid", "زبرا", "شید"]):
         ctype = "zebra_shid"
     else:
         ctype = "kerkere"
@@ -568,7 +569,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # ---------------------------------------------------------
-# نمونه‌کارها (ارسال آلبوم بر اساس پست‌های کانال)
+# نمونه‌کارها
 # ---------------------------------------------------------
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -743,7 +744,11 @@ async def post_init(application):
 # ---------------------------------------------------------
 def main():
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAEBL9XPR9JKGZoLyw4PPIAtV2UFPAQ6lkc")
+    
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
+
+    if app.job_queue is None:
+        logging.warning("⚠️ JobQueue فعال نشد! حتماً کتابخانه APScheduler را نصب کنید.")
 
     MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
 
