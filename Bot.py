@@ -275,6 +275,9 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
+        # تعیین شناسه آموزش اندازه‌گیری اختصاصی جهت جلوگیری از خطای دکمه
+        guide_code = "kerkere" if curtain_type == "پرده کرکره فلزی" else "zebra_shid"
+
         result_msg = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
             f"قیمت امروز | {curtain_icon}\n"
@@ -293,7 +296,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
             ],
             [
-                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"mtype_{curtain_type}"),
+                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"mguide_{guide_code}"),
                 InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")
             ],
             [
@@ -307,7 +310,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
-        # تنظیم یادآوری ۳۰ ثانیه‌ای جهت تست
+        # تنظیم تایمر یادآوری ۳۰ ثانیه‌ای
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -316,6 +319,8 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 user_id=update.effective_user.id,
                 data={'curtain_type': curtain_type}
             )
+        else:
+            logging.error("JobQueue در دسترس نیست! مطمئن شوید python-telegram-bot[job-queue] نصب شده است.")
 
         return ConversationHandler.END
 
@@ -333,8 +338,8 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
         await update.callback_query.answer()
 
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("پرده شیدرول ساده - شیدرول بلک اوت - زبرا 🪟", callback_data="mtype_zebra_shid")],
-        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="mtype_kerkere")]
+        [InlineKeyboardButton("پرده شیدرول ساده - شیدرول بلک اوت - زبرا 🪟", callback_data="mguide_zebra_shid")],
+        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="mguide_kerkere")]
     ])
     await msg_target.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n📐 لطفاً پرده مورد نظر خود را برای آموزش اندازه‌گیری انتخاب کنید:", reply_markup=kb)
 
@@ -342,12 +347,8 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     
-    raw_type = query.data.replace("mtype_", "").strip()
-    
-    if any(k in raw_type for k in ["zebra", "shid", "زبرا", "شید"]):
-        ctype = "zebra_shid"
-    else:
-        ctype = "kerkere"
+    raw_type = query.data.replace("mguide_", "").strip()
+    ctype = "kerkere" if "kerkere" in raw_type else "zebra_shid"
         
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("داخل چهارچوب (توکار) 🖼", callback_data=f"mpos_{ctype}_inside")],
@@ -747,9 +748,6 @@ def main():
     
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
-    if app.job_queue is None:
-        logging.warning("⚠️ JobQueue فعال نشد! حتماً کتابخانه APScheduler را نصب کنید.")
-
     MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
 
     price_conv_handler = ConversationHandler(
@@ -824,7 +822,7 @@ def main():
     app.add_handler(CallbackQueryHandler(show_colors_callback, pattern="^colors_"))
     app.add_handler(CallbackQueryHandler(color_selected_callback, pattern="^color_selected$"))
     app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
-    app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mtype_"))
+    app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mguide_"))
     app.add_handler(CallbackQueryHandler(handle_mpos_selection, pattern="^mpos_"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
