@@ -39,12 +39,11 @@ PRICES = {
 
 USER_LIST = {} 
 
-# لیست شماره پست‌های کانال تلگرام استخراج‌شده از فایل اکسل
 PORTFOLIO_POSTS = {
-    'پرده زبرا': list(range(1263, 1285)),       # پست‌های ۱۲۶۳ تا ۱۲۸۴
-    'پرده شید ساده': list(range(1285, 1305)),   # پست‌های ۱۲۸۵ تا ۱۳۰۴
-    'پرده کرکره فلزی': list(range(1305, 1324)), # پست‌های ۱۳۰۵ تا ۱۳۲۳
-    'پرده شید بلک اوت': list(range(1324, 1334)) # پست‌های ۱۳۲۴ تا ۱۳۳۳
+    'پرده زبرا': list(range(1263, 1285)),
+    'پرده شید ساده': list(range(1285, 1305)),
+    'پرده کرکره فلزی': list(range(1305, 1324)),
+    'پرده شید بلک اوت': list(range(1324, 1334))
 }
 
 # ---------------------------------------------------------
@@ -99,7 +98,7 @@ async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bo
         return True
 
 # ---------------------------------------------------------
-# سیستم یادآوری و پیگیری خودکار (۲۴ ساعت بعد)
+# سیستم یادآوری و پیگیری خودکار
 # ---------------------------------------------------------
 async def send_followup_message(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
@@ -305,7 +304,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
-        # تنظیم پیگیری ۲۴ ساعته
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -322,7 +320,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return GET_HEIGHT
 
 # ---------------------------------------------------------
-# بخش آموزش اندازه‌گیری
+# بخش آموزش اندازه‌گیری (کاملاً بر اساس متن ارسالی)
 # ---------------------------------------------------------
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -330,10 +328,10 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
         await update.callback_query.answer()
 
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("زبرا / شید / بلک‌اوت 🪟", callback_data="mtype_zebra_shid")],
-        [InlineKeyboardButton("کرکره فلزی 🏢", callback_data="mtype_kerkere")]
+        [InlineKeyboardButton("اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت", callback_data="mtype_zebra_shid")],
+        [InlineKeyboardButton("اندازه گیری پرده کرکره فلزی 16 میل و 25 میل", callback_data="mtype_kerkere")]
     ])
-    await msg_target.reply_text("📐 قصد اندازه‌گیری چه نوع پرده‌ای را دارید؟", reply_markup=kb)
+    await msg_target.reply_text("📐 نوع پرده مورد نظر را انتخاب کنید:", reply_markup=kb)
 
 async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -343,16 +341,14 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     
     if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا", "پرده زبرا و شید"]:
         ctype = "zebra_shid"
-        label = "پرده زبرا / شیدرول ساده / شید رول بلک اوت"
     else:
         ctype = "kerkere"
-        label = "پرده کرکره فلزی 16 میل و 25 میل"
         
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("داخل چهارچوب (توکار) 🚪", callback_data=f"mpos_{ctype}_inside")],
-        [InlineKeyboardButton("خارج چهارچوب (روکار) 🖼", callback_data=f"mpos_{ctype}_outside")]
+        [InlineKeyboardButton("داخل چهار چوب (توکار)", callback_data=f"mpos_{ctype}_inside")],
+        [InlineKeyboardButton("خارج چهار چوب (روکار)", callback_data=f"mpos_{ctype}_outside")]
     ])
-    await query.message.reply_text(f"نصب {label} شما به چه صورت است؟", reply_markup=kb)
+    await query.message.reply_text("محل نصب را انتخاب کنید:", reply_markup=kb)
 
 async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -362,40 +358,46 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     ctype = data_parts[0]
     pos = data_parts[1]
 
-    tools_text = (
-        "🛠 **ابزار اندازه‌گیری:**\n"
-        "استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
-    )
-
     if ctype == "zebra_shid":
         if pos == "inside":
-            detail = (
-                "📏 **نحوه اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت (نصب داخل چهارچوب):**\n\n"
-                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم\n\n"
+            exact_text = (
+                "اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت\n"
+                "داخل چهار چوب (توکار)\n"
+                "📏 **نحوه اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت (نصب داخل چهارچوب):**\n"
+                "🛠 **ابزار اندازه‌گیری:**استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است."
+                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم"
                 "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 15 سانتیمتر اضافه میکنیم"
             )
         else:
-            detail = (
-                "📏 **نحوه اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت (نصب خارج چهارچوب):**\n\n"
-                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم\n\n"
+            exact_text = (
+                "اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت\n"
+                "خارج چهار چوب (روکار)\n"
+                "📏 **نحوه اندازه گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت (نصب خارج چهارچوب):**\n"
+                "🛠 **ابزار اندازه‌گیری:**استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است."
+                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم"
                 "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 20 سانتیمتر اضافه میکنیم"
             )
     else:
         if pos == "inside":
-            detail = (
-                "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب داخل چهارچوب):**\n\n"
-                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم\n\n"
+            exact_text = (
+                "اندازه گیری پرده کرکره فلزی 16 میل و 25 میل\n"
+                "داخل چهار چوب (توکار)\n"
+                "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب داخل چهارچوب):**\n"
+                "🛠 **ابزار اندازه‌گیری:**استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است."
+                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم"
                 "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 3 سانتیمتر کم میکنیم"
             )
         else:
-            detail = (
-                "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب خارج چهارچوب):**\n\n"
-                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم\n\n"
+            exact_text = (
+                "اندازه گیری پرده کرکره فلزی 16 میل و 25 میل\n"
+                "خارج چهار چوب (روکار)\n"
+                "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب خارج چهارچوب):**\n"
+                "🛠 **ابزار اندازه‌گیری:**استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است."
+                "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم"
                 "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم"
             )
 
-    final_msg = tools_text + detail + BOT_FOOTER
-    await query.message.reply_text(final_msg)
+    await query.message.reply_text(exact_text + BOT_FOOTER)
 
 # ---------------------------------------------------------
 # ثبت سفارش و مشاوره مستقیم
