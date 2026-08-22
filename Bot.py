@@ -147,11 +147,12 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     welcome_msg = (
         f"🗓 تاریخ: {get_jalali_date()}\n\n"
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید." + BOT_FOOTER
+        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید.\n\n"
+        "👇 یکی از گزینه ها را انتخاب کنید:" + BOT_FOOTER
     )
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
-        await update.message.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
+        await update.message.reply_text(welcome_msg, reply_markup=inline_kb)
     elif update.callback_query:
         await update.callback_query.message.reply_text(welcome_msg, reply_markup=inline_kb)
 
@@ -330,7 +331,7 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
         await update.callback_query.answer()
 
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("پرده شید ساده / بلک اوت / زبرا 🪟", callback_data="mtype_zebra_shid")],
+        [InlineKeyboardButton("پرده شیدرول ساده یا شید رول بلک اوت یا زبرا 🪟", callback_data="mtype_zebra_shid")],
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="mtype_kerkere")]
     ])
     await msg_target.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n📐 لطفاً پرده مورد نظر خود را برای آموزش اندازه‌گیری انتخاب کنید:", reply_markup=kb)
@@ -364,7 +365,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
         if pos == "inside":
             exact_text = (
                 f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت\n"
+                "📏 آموزش اندازه‌گیری پرده شیدرول ساده / شید رول بلک اوت / زبرا\n"
                 "📍 محل نصب: داخل چهارچوب (توکار)\n\n"
                 "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
                 "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۲ سانتی‌متر کم می‌کنیم.\n"
@@ -373,7 +374,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
         else:
             exact_text = (
                 f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده زبرا / شیدرول ساده / شید رول بلک اوت\n"
+                "📏 آموزش اندازه‌گیری پرده شیدرول ساده / شید رول بلک اوت / زبرا\n"
                 "📍 محل نصب: خارج چهارچوب (روکار)\n\n"
                 "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
                 "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۱۰ سانتی‌متر اضافه می‌کنیم.\n"
