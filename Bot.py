@@ -72,7 +72,7 @@ SET_PR_VAL = 10
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
-    ['ثبت سفارش و مشاوره مستقیم 📝', 'آموزش اندازه‌گیری 📐'],
+    ['ثبت سفارش و مشاوره مستقیم 📝'],
     ['هزینه نصب و ارسال 🚚', 'وب سایت خرید آنلاین 🌐'],
     ['ساعات کاری 🕒', 'آدرس و شماره تماس 📍']
 ], resize_keyboard=True)
@@ -142,7 +142,8 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
         [InlineKeyboardButton("2️⃣ ثبت سفارش و خرید در سایت فارس گالری", callback_data="start_order")],
-        [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")]
+        [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")],
+        [InlineKeyboardButton("📏 آموزش اندازه‌گیری", callback_data="measure_main")]
     ])
     welcome_msg = (
         f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -151,7 +152,6 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
         "👇 یکی از گزینه ها را انتخاب کنید:" + BOT_FOOTER
     )
     if update.message:
-        # فعال‌سازی کیبورد ثابت پایین و ارسال تنها یک پیام خوش‌آمدگویی همراه با دکمه‌های شیشه‌ای
         await update.message.reply_text("منوی اصلی فعال شد 🌸", reply_markup=PERSISTENT_KEYBOARD)
         await update.message.reply_text(welcome_msg, reply_markup=inline_kb)
     elif update.callback_query:
@@ -178,6 +178,98 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_welcome_message(update, context)
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
+
+# ---------------------------------------------------------
+# بخش آموزش اندازه‌گیری (جدید)
+# ---------------------------------------------------------
+async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data == "measure_main":
+        keyboard = [
+            [InlineKeyboardButton("پرده زبرا / شیدرول ساده / شید رول بلک اوت", callback_data="type_zebra_shade")],
+            [InlineKeyboardButton("پرده کرکره فلزی 16 میل و 25 میل", callback_data="type_metal_blind")],
+            [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_main")]
+        ]
+        await query.edit_message_text(
+            text=f"🗓 تاریخ: {get_jalali_date()}\n\nبرای کدام مدل پرده می‌خواهید اندازه‌گیری کنید؟" + BOT_FOOTER,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data == "type_zebra_shade":
+        keyboard = [
+            [InlineKeyboardButton("داخل چهارچوب (توکار)", callback_data="zebra_inside")],
+            [InlineKeyboardButton("خارج چهارچوب (روکار)", callback_data="zebra_outside")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="measure_main")]
+        ]
+        await query.edit_message_text(
+            text=f"🗓 تاریخ: {get_jalali_date()}\n\nنوع نصب پرده (زبرا / شیدرول) را انتخاب کنید:" + BOT_FOOTER,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data == "type_metal_blind":
+        keyboard = [
+            [InlineKeyboardButton("داخل چهارچوب (توکار)", callback_data="metal_inside")],
+            [InlineKeyboardButton("خارج چهارچوب (روکار)", callback_data="metal_outside")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="measure_main")]
+        ]
+        await query.edit_message_text(
+            text=f"🗓 تاریخ: {get_jalali_date()}\n\nنوع نصب پرده کرکره فلزی را انتخاب کنید:" + BOT_FOOTER,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    elif data == "zebra_inside":
+        text = (
+            f"🗓 تاریخ: {get_jalali_date()}\n\n"
+            "📏 **نحوه اندازه گیری پرده زبرا - شیدرول ساده - شید رول بلک اوت (نصب داخل چهارچوب):**\n\n"
+            "🛠 **ابزار اندازه‌گیری:**\nاستفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
+            "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم\n"
+            "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 15 سانتیمتر اضافه میکنیم."
+            + BOT_FOOTER
+        )
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif data == "zebra_outside":
+        text = (
+            f"🗓 تاریخ: {get_jalali_date()}\n\n"
+            "📏 **نحوه اندازه گیری پرده زبرا - شیدرول ساده - شید رول بلک اوت (نصب خارج چهارچوب):**\n\n"
+            "🛠 **ابزار اندازه‌گیری:**\nاستفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
+            "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم\n"
+            "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 20 سانتیمتر اضافه میکنیم."
+            + BOT_FOOTER
+        )
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif data == "metal_inside":
+        text = (
+            f"🗓 تاریخ: {get_jalali_date()}\n\n"
+            "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب داخل چهارچوب):**\n\n"
+            "🛠 **ابزار اندازه‌گیری:**\nاستفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
+            "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 2 سانتیمتر کم میکنیم\n"
+            "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 3 سانتیمتر کم میکنیم"
+            + BOT_FOOTER
+        )
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif data == "metal_outside":
+        text = (
+            f"🗓 تاریخ: {get_jalali_date()}\n\n"
+            "📏 **نحوه اندازه گیری پرده کرکره فلزی 16 میل و 25 میل (نصب خارج چهارچوب):**\n\n"
+            "🛠 **ابزار اندازه‌گیری:**\nاستفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
+            "• **عرض:** عرض چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم\n"
+            "• **ارتفاع:** ارتفاع چهارچوب را دقیق اندازه گرفته و 10 سانتیمتر اضافه میکنیم"
+            + BOT_FOOTER
+        )
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
+        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    elif data == "back_to_main":
+        await send_welcome_message(update, context)
 
 # ---------------------------------------------------------
 # استعلام قیمت و محاسبات آنلاین
@@ -275,7 +367,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rules_text = "\n" + rules_text + "\n"
 
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
-        guide_code = "kerkere" if curtain_type == "پرده کرکره فلزی" else "zebra_shid"
 
         result_msg = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -295,12 +386,11 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
             ],
             [
-                InlineKeyboardButton("آموزش اندازه‌گیری 📐", callback_data=f"mguide_{guide_code}"),
-                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")
+                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info"),
+                InlineKeyboardButton("محاسبه جدید 🔄", callback_data="start_inquiry")
             ],
             [
-                InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb"),
-                InlineKeyboardButton("محاسبه جدید 🔄", callback_data="start_inquiry")
+                InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb")
             ],
             [
                 InlineKeyboardButton("خرید آنلاین 🛒", url=buy_url)
@@ -324,83 +414,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Calculation error: {e}")
         await update.message.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n⚠️ لطفاً ارتفاع را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 200).")
         return GET_HEIGHT
-
-# ---------------------------------------------------------
-# بخش آموزش اندازه‌گیری
-# ---------------------------------------------------------
-async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg_target = update.message or update.callback_query.message
-    if update.callback_query:
-        await update.callback_query.answer()
-
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("پرده شیدرول ساده - شیدرول بلک اوت - زبرا 🪟", callback_data="mguide_zebra_shid")],
-        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="mguide_kerkere")]
-    ])
-    await msg_target.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n📐 لطفاً پرده مورد نظر خود را برای آموزش اندازه‌گیری انتخاب کنید:", reply_markup=kb)
-
-async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    raw_type = query.data.replace("mguide_", "").strip()
-    ctype = "kerkere" if "kerkere" in raw_type else "zebra_shid"
-        
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("داخل چهارچوب (توکار) 🖼", callback_data=f"mpos_{ctype}_inside")],
-        [InlineKeyboardButton("خارج چهارچوب (روکار) 🚪", callback_data=f"mpos_{ctype}_outside")]
-    ])
-    await query.message.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n📍 محل نصب پرده را انتخاب کنید:", reply_markup=kb)
-
-async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    data_parts = query.data.replace("mpos_", "").split("_")
-    ctype = data_parts[0]
-    pos = data_parts[1]
-
-    # متن‌های کامل آموزش اندازه‌گیری
-    if ctype == "zebra_shid":
-        if pos == "inside":
-            exact_text = (
-                f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده شیدرول ساده - شیدرول بلک اوت - زبرا\n"
-                "📍 محل نصب: داخل چهارچوب (توکار)\n\n"
-                "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
-                "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۲ سانتی‌متر کم می‌کنیم.\n"
-                "▫️ ارتفاع: ارتفاع چهارچوب را دقیق اندازه گرفته و ۱۵ سانتی‌متر اضافه می‌کنیم."
-            )
-        else:
-            exact_text = (
-                f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده شیدرول ساده - شیدرول بلک اوت - زبرا\n"
-                "📍 محل نصب: خارج چهارچوب (روکار)\n\n"
-                "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
-                "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۱۰ سانتی‌متر اضافه می‌کنیم.\n"
-                "▫️ ارتفاع: ارتفاع چهارچوب را دقیق اندازه گرفته و ۲۰ سانتی‌متر اضافه می‌کنیم."
-            )
-    else:
-        if pos == "inside":
-            exact_text = (
-                f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده کرکره فلزی ۱۶ میل و ۲۵ میل\n"
-                "📍 محل نصب: داخل چهارچوب (توکار)\n\n"
-                "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
-                "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۲ سانتی‌متر کم می‌کنیم.\n"
-                "▫️ ارتفاع: ارتفاع چهارچوب را دقیق اندازه گرفته و ۳ سانتی‌متر کم می‌کنیم."
-            )
-        else:
-            exact_text = (
-                f"🗓 تاریخ: {get_jalali_date()}\n\n"
-                "📏 آموزش اندازه‌گیری پرده کرکره فلزی ۱۶ میل و ۲۵ میل\n"
-                "📍 محل نصب: خارج چهارچوب (روکار)\n\n"
-                "🛠 ابزار اندازه‌گیری: استفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
-                "▫️ عرض: عرض چهارچوب را دقیق اندازه گرفته و ۱۰ سانتی‌متر اضافه می‌کنیم.\n"
-                "▫️ ارتفاع: ارتفاع چهارچوب را دقیق اندازه گرفته و ۱۰ سانتی‌متر اضافه می‌کنیم."
-            )
-
-    await query.message.reply_text(exact_text + BOT_FOOTER)
 
 # ---------------------------------------------------------
 # ثبت سفارش و مشاوره مستقیم
@@ -722,8 +735,6 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
         await show_portfolio_menu(update, context)
     elif text == 'ثبت سفارش و مشاوره مستقیم 📝':
         await start_direct_order(update, context)
-    elif text == 'آموزش اندازه‌گیری 📐':
-        await show_measurement_guide(update, context)
     elif text == 'هزینه نصب و ارسال 🚚':
         await calc_services(update, context)
     return ConversationHandler.END
@@ -745,7 +756,7 @@ def main():
     
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
-    MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
+    MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|هزینه نصب و ارسال 🚚)$'
 
     price_conv_handler = ConversationHandler(
         entry_points=[
@@ -809,7 +820,6 @@ def main():
     app.add_handler(MessageHandler(filters.Regex('^ساعات کاری 🕒$'), show_hours))
     app.add_handler(MessageHandler(filters.Regex('^آدرس و شماره تماس 📍$'), show_contact))
     app.add_handler(MessageHandler(filters.Regex('^نمونه کارها 🖼$'), show_portfolio_menu))
-    app.add_handler(MessageHandler(filters.Regex('^آموزش اندازه‌گیری 📐$'), show_measurement_guide))
     app.add_handler(MessageHandler(filters.Regex('^هزینه نصب و ارسال 🚚$'), calc_services))
     
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
@@ -819,10 +829,11 @@ def main():
     app.add_handler(CallbackQueryHandler(show_colors_callback, pattern="^colors_"))
     app.add_handler(CallbackQueryHandler(color_selected_callback, pattern="^color_selected$"))
     app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
-    app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mguide_"))
-    app.add_handler(CallbackQueryHandler(handle_mpos_selection, pattern="^mpos_"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
+
+    # هندلرهای بخش جدید آموزش اندازه‌گیری
+    app.add_handler(CallbackQueryHandler(measure_guide_callback, pattern="^(measure_main|type_zebra_shade|type_metal_blind|zebra_inside|zebra_outside|metal_inside|metal_outside|back_to_main)$"))
 
     print("Bot is running...")
     app.run_polling()
