@@ -69,7 +69,7 @@ GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO_CHOICE, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
-# اضافه شدن دکمه «آموزش اندازه‌گیری 📏» به کیبورد ثابت اصلی
+# کیبورد ثابت اصلی
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
@@ -140,11 +140,11 @@ async def send_join_channel_message(update: Update):
         await update.callback_query.message.reply_text(msg_text, reply_markup=keyboard)
 
 async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # منوی ۳ گزینه‌ای اولیه بدون دکمه آموزش اندازه‌گیری
     inline_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("1️⃣ میخواهم فقط استعلام قیمت پرده بگیرم", callback_data="start_inquiry")],
         [InlineKeyboardButton("2️⃣ ثبت سفارش و خرید در سایت فارس گالری", callback_data="start_order")],
-        [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")],
-        [InlineKeyboardButton("📏 آموزش اندازه‌گیری", callback_data="measure_main")]
+        [InlineKeyboardButton("3️⃣ مشاوره انتخاب پرده با کارشناسان مجموعه ما", callback_data="start_direct_order_cb")]
     ])
     welcome_msg = (
         f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -276,7 +276,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
         await send_welcome_message(update, context)
 
 # ---------------------------------------------------------
-# استعلام قیمت و محاسبات آنلاین (منوی شیشه‌ای خروجی قیمت)
+# استعلام قیمت و محاسبات آنلاین
 # ---------------------------------------------------------
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -309,10 +309,9 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     return GET_WIDTH
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
-    
+    raw_text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
     try:
-        width = float(text)
+        width = float(raw_text)
         if width <= 0:
             raise ValueError()
         context.user_data['width'] = width
@@ -323,10 +322,9 @@ async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return GET_WIDTH
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
-
+    raw_text = convert_to_english_digits(update.message.text.strip()).replace(',', '.')
     try:
-        height = float(text)
+        height = float(raw_text)
         if height <= 0:
             raise ValueError()
 
@@ -384,7 +382,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{BOT_FOOTER}"
         )
 
-        # منوی شیشه‌ای کامل زیر پیام استعلام قیمت
+        # دکمه آموزش اندازه‌گیری به منوی شیشه‌ای خروجی قیمت اضافه شد
         inline_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton(f"💰 قیمت نهایی: {total_price:,} تومان", callback_data="noop")],
             [
@@ -392,10 +390,11 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
             ],
             [
-                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info"),
-                InlineKeyboardButton("محاسبه جدید 🔄", callback_data="start_inquiry")
+                InlineKeyboardButton("📏 آموزش اندازه‌گیری", callback_data="measure_main"),
+                InlineKeyboardButton("هزینه نصب و ارسال 🚚", callback_data="show_install_info")
             ],
             [
+                InlineKeyboardButton("محاسبه جدید 🔄", callback_data="start_inquiry"),
                 InlineKeyboardButton("ثبت سفارش و مشاوره 📝", callback_data="start_direct_order_cb")
             ],
             [
@@ -416,8 +415,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return ConversationHandler.END
 
-    except Exception as e:
-        logging.error(f"Calculation error: {e}")
+    except ValueError:
         await update.message.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n⚠️ لطفاً ارتفاع را فقط به صورت عدد سانتی‌متر وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
@@ -778,7 +776,6 @@ def main():
             CommandHandler('start', start_command),
             MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
         ],
-        per_message=False,
         conversation_timeout=180
     )
 
@@ -801,7 +798,6 @@ def main():
             CommandHandler('start', start_command),
             MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
         ],
-        per_message=False,
         conversation_timeout=300
     )
 
@@ -811,8 +807,7 @@ def main():
         fallbacks=[
             CommandHandler('start', start_command),
             MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)
-        ],
-        per_message=False
+        ]
     )
 
     app.add_handler(CommandHandler('start', start_command))
