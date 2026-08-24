@@ -151,7 +151,8 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
         "👇 یکی از گزینه ها را انتخاب کنید:" + BOT_FOOTER
     )
     if update.message:
-        await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
+        # فعال‌سازی کیبورد ثابت پایین و ارسال تنها یک پیام خوش‌آمدگویی همراه با دکمه‌های شیشه‌ای
+        await update.message.reply_text("منوی اصلی فعال شد 🌸", reply_markup=PERSISTENT_KEYBOARD)
         await update.message.reply_text(welcome_msg, reply_markup=inline_kb)
     elif update.callback_query:
         await update.callback_query.message.reply_text(welcome_msg, reply_markup=inline_kb)
@@ -308,7 +309,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(result_msg, reply_markup=inline_kb)
 
-        # ارسال یادآوری ۳۰ ثانیه بعد
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -360,6 +360,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     ctype = data_parts[0]
     pos = data_parts[1]
 
+    # متن‌های کامل آموزش اندازه‌گیری
     if ctype == "zebra_shid":
         if pos == "inside":
             exact_text = (
