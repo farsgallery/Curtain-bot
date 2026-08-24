@@ -69,10 +69,11 @@ GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO_CHOICE, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
+# اضافه شدن دکمه «آموزش اندازه‌گیری 📏» به کیبورد ثابت اصلی
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
     ['پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼'],
-    ['ثبت سفارش و مشاوره مستقیم 📝'],
+    ['آموزش اندازه‌گیری 📏', 'ثبت سفارش و مشاوره مستقیم 📝'],
     ['هزینه نصب و ارسال 🚚', 'وب سایت خرید آنلاین 🌐'],
     ['ساعات کاری 🕒', 'آدرس و شماره تماس 📍']
 ], resize_keyboard=True)
@@ -180,12 +181,14 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
 
 # ---------------------------------------------------------
-# بخش آموزش اندازه‌گیری (جدید)
+# بخش آموزش اندازه‌گیری
 # ---------------------------------------------------------
 async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
+    msg_target = update.message or (update.callback_query.message if update.callback_query else None)
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    data = update.callback_query.data if update.callback_query else "measure_main"
 
     if data == "measure_main":
         keyboard = [
@@ -193,10 +196,11 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("پرده کرکره فلزی 16 میل و 25 میل", callback_data="type_metal_blind")],
             [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_main")]
         ]
-        await query.edit_message_text(
-            text=f"🗓 تاریخ: {get_jalali_date()}\n\nبرای کدام مدل پرده می‌خواهید اندازه‌گیری کنید؟" + BOT_FOOTER,
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+        text = f"🗓 تاریخ: {get_jalali_date()}\n\nبرای کدام مدل پرده می‌خواهید اندازه‌گیری کنید؟" + BOT_FOOTER
+        if update.callback_query:
+            await update.callback_query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await msg_target.reply_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "type_zebra_shade":
         keyboard = [
@@ -204,7 +208,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("خارج چهارچوب (روکار)", callback_data="zebra_outside")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="measure_main")]
         ]
-        await query.edit_message_text(
+        await update.callback_query.edit_message_text(
             text=f"🗓 تاریخ: {get_jalali_date()}\n\nنوع نصب پرده (زبرا / شیدرول) را انتخاب کنید:" + BOT_FOOTER,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -215,7 +219,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("خارج چهارچوب (روکار)", callback_data="metal_outside")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="measure_main")]
         ]
-        await query.edit_message_text(
+        await update.callback_query.edit_message_text(
             text=f"🗓 تاریخ: {get_jalali_date()}\n\nنوع نصب پرده کرکره فلزی را انتخاب کنید:" + BOT_FOOTER,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -230,7 +234,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             + BOT_FOOTER
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
-        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.callback_query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "zebra_outside":
         text = (
@@ -242,7 +246,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             + BOT_FOOTER
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
-        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.callback_query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "metal_inside":
         text = (
@@ -254,7 +258,7 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             + BOT_FOOTER
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
-        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.callback_query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "metal_outside":
         text = (
@@ -266,13 +270,13 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             + BOT_FOOTER
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
-        await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.callback_query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data == "back_to_main":
         await send_welcome_message(update, context)
 
 # ---------------------------------------------------------
-# استعلام قیمت و محاسبات آنلاین
+# استعلام قیمت و محاسبات آنلاین (منوی شیشه‌ای خروجی قیمت)
 # ---------------------------------------------------------
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -375,12 +379,14 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🧮 متراژ محاسبه شده: {calc_area:.2f} متر مربع\n"
             f"{rules_text}\n"
             f"🪙 قیمت هر متر مربع: {unit_price:,} تومان\n\n"
-            f"💵 قیمت نهایی با همه لوازم پرده: {total_price:,} تومان\n\n"
+            f"💵 **قیمت نهایی با همه لوازم پرده: {total_price:,} تومان**\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روز کاری"
             f"{BOT_FOOTER}"
         )
 
+        # منوی شیشه‌ای کامل زیر پیام استعلام قیمت
         inline_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"💰 قیمت نهایی: {total_price:,} تومان", callback_data="noop")],
             [
                 InlineKeyboardButton("رنگ بندی 🎨", callback_data=f"colors_{curtain_type}"),
                 InlineKeyboardButton("نمونه کارها 🖼", callback_data=f"port_{curtain_type}")
@@ -397,7 +403,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        await update.message.reply_text(result_msg, reply_markup=inline_kb)
+        await update.message.reply_text(result_msg, parse_mode="Markdown", reply_markup=inline_kb)
 
         if context.job_queue:
             context.job_queue.run_once(
@@ -737,6 +743,8 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
         await start_direct_order(update, context)
     elif text == 'هزینه نصب و ارسال 🚚':
         await calc_services(update, context)
+    elif text == 'آموزش اندازه‌گیری 📏':
+        await measure_guide_callback(update, context)
     return ConversationHandler.END
 
 async def post_init(application):
@@ -756,7 +764,7 @@ def main():
     
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
-    MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|هزینه نصب و ارسال 🚚)$'
+    MENU_REGEX = '^(شروع 🏠|پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|هزینه نصب و ارسال 🚚|آموزش اندازه‌گیری 📏)$'
 
     price_conv_handler = ConversationHandler(
         entry_points=[
@@ -821,6 +829,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex('^آدرس و شماره تماس 📍$'), show_contact))
     app.add_handler(MessageHandler(filters.Regex('^نمونه کارها 🖼$'), show_portfolio_menu))
     app.add_handler(MessageHandler(filters.Regex('^هزینه نصب و ارسال 🚚$'), calc_services))
+    app.add_handler(MessageHandler(filters.Regex('^آموزش اندازه‌گیری 📏$'), measure_guide_callback))
     
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
     app.add_handler(CallbackQueryHandler(show_curtains_callback, pattern="^start_inquiry$"))
@@ -831,8 +840,9 @@ def main():
     app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
+    app.add_handler(CallbackQueryHandler(lambda u, c: None, pattern="^noop$"))
 
-    # هندلرهای بخش جدید آموزش اندازه‌گیری
+    # هندلرهای بخش آموزش اندازه‌گیری
     app.add_handler(CallbackQueryHandler(measure_guide_callback, pattern="^(measure_main|type_zebra_shade|type_metal_blind|zebra_inside|zebra_outside|metal_inside|metal_outside|back_to_main)$"))
 
     print("Bot is running...")
