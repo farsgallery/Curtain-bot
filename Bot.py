@@ -702,7 +702,7 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 def main():
-    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAFLhYDctKWTpAArMoIJFrP6r6cSWVlyb4s")
+    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAHXysikIfnixDd6WTm1aSNYYzCjbr9jITc")
     app = ApplicationBuilder().token(TOKEN).build()
 
     MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
