@@ -80,14 +80,14 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
-# پس‌وند عمومی الحاقی به انتهای تمام پیام‌های ربات
+# فرمت پیام‌ها: تاریخ در بالا و آدرس ربات در پایین
 def append_footer(text: str) -> str:
+    header = f"📅 تاریخ امروز: {get_jalali_date()}\n\n"
     footer = (
-        f"\n\n📅 تاریخ امروز: {get_jalali_date()}\n"
-        "🧮 محاسبه قیمت پرده در ربات تلگرام فارس گالری\n"
+        "\n\n🧮 محاسبه قیمت پرده در ربات تلگرام فارس گالری\n"
         "@farsgallery_bot"
     )
-    return text + footer
+    return header + text + footer
 
 async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     try:
@@ -214,9 +214,9 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     try:
         height = float(text)
-        width = context.user_data['width']
-        curtain_type = context.user_data['curtain_type']
-        curtain_icon = context.user_data['curtain_icon']
+        width = context.user_data.get('width', 100)
+        curtain_type = context.user_data.get('curtain_type', 'پرده زبرا')
+        curtain_icon = context.user_data.get('curtain_icon', curtain_type)
         
         unit_price = PRICES.get(curtain_type, 2000000)
         rules_applied = []
@@ -257,13 +257,12 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buy_url = PRODUCT_LINKS.get(curtain_type, 'https://farsgallery.com')
 
         result_msg = (
-            f"قیمت امروز | 🗓 {get_jalali_date()}\n"
             f"{curtain_icon}\n"
             f"📐 عرض: {int(width)} سانتی‌متر | ارتفاع: {int(height)} سانتی‌متر\n"
             f"🧮 متراژ: {calc_area:.2f} متر مربع\n"
             f"{rules_text}"
             f"🪙 قیمت هر متر: {unit_price:,} تومان\n\n"
-            f"💵 **قیمت نهایی: {total_price:,} تومان**\n\n"
+            f"💵 قیمت نهایی: {total_price:,} تومان\n\n"
             f"📦 ارسال به سراسر کشور | ⭐ کیفیت درجه ۱ | 🛡 5 سال ضمانت | 🚚 تحویل 3 روزه"
         )
 
@@ -285,7 +284,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        await update.message.reply_text(append_footer(result_msg), reply_markup=inline_kb, parse_mode='Markdown')
+        await update.message.reply_text(append_footer(result_msg), reply_markup=inline_kb)
 
         if context.job_queue:
             context.job_queue.run_once(
@@ -297,11 +296,12 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return ConversationHandler.END
 
-    except ValueError:
+    except Exception as e:
+        logging.error(f"Error calculating price: {e}")
         await update.message.reply_text(append_footer("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200)."))
         return GET_HEIGHT
 
-# --- سیستم آموزش اندازه‌گیری اصلاح شده ---
+# --- سیستم آموزش اندازه‌گیری ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -342,30 +342,30 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     pos = data_parts[1] if len(data_parts) > 1 else "outside"
 
     tools_text = (
-        "🛠 **انتخاب وسیله اندازه‌گیری:**\n"
+        "🛠 انتخاب وسیله اندازه‌گیری:\n"
         "مترهای فلزی بهترین وسیله برای اندازه‌گیری هستند. "
         "نوارهای پارچه‌ای و مترهای خیاطی برای اندازه‌گیری پرده‌های پنجره مناسب نیستند و ممکن است اندکی خطا در اثر کشش ایجاد کنند.\n\n"
     )
 
     if ctype == "zebra":
         notes = (
-            "📌 **نکات مهم درباره پرده های زبرا - شیدرول ساده - شیدرول بلک‌اوت:**\n"
+            "📌 نکات مهم درباره پرده های زبرا - شیدرول ساده - شیدرول بلک‌اوت:\n"
             "۱. این نوع پرده ها به دلیل مکانیزم بالابر نیاز به محاسبة خاصی دارند.\n"
             "۲. قاب بالای این پرده ها حدود ۱۰ سانتی‌متر فضا نیاز دارد. اندازه قاب پرده از آن جهت اهمیت دارد که شما باید بالای پنجره خود حداقل ۱۰ سانتی‌متر فضا داشته باشید تا هنگام باز کردن پنجره محدودیتی نداشته باشید.\n\n"
         )
         if pos == "inside":
             detail = (
-                "📏 **آموزش اندازه‌گیری داخل چهارچوب (توکار) (زبرا - شیدرول ساده - شیدرول بلک‌اوت):**\n"
+                "📏 آموزش اندازه‌گیری داخل چهارچوب (توکار) (زبرا - شیدرول ساده - شیدرول بلک‌اوت):\n"
                 "۱. ابتدا متر فلزی را آماده کنید.\n"
-                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و **کوچک‌ترین عرض** را یادداشت کنید. سپس حداقل **2 سانتی‌متر** برای اطمینان از قرار گرفتن قاب در چهارچوب از عرض پرده کم کنید.\n"
-                "۳. و حالا ارتفاع را اندازه‌گیری کرده و **10 سانتی‌متر** اضافه کنید."
+                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و کوچک‌ترین عرض را یادداشت کنید. سپس حداقل 2 سانتی‌متر برای اطمینان از قرار گرفتن قاب در چهارچوب از عرض پرده کم کنید.\n"
+                "۳. و حالا ارتفاع را اندازه‌گیری کرده و 10 سانتی‌متر اضافه کنید."
             )
         else:
             detail = (
-                "📏 **آموزش اندازه‌گیری خارج چهارچوب (روکار) (زبرا - شیدرول ساده - شیدرول بلک‌اوت):**\n"
+                "📏 آموزش اندازه‌گیری خارج چهارچوب (روکار) (زبرا - شیدرول ساده - شیدرول بلک‌اوت):\n"
                 "۱. ابتدا متر فلزی را آماده کنید.\n"
-                "۲. عرض پنجره را اندازه‌گیری کنید و برای اینکه پرده به صورت کامل پنجره را بپوشاند، **15 سانتی‌متر** به عرض اندازه‌گیری شده اضافه کنید.\n"
-                "۳. و حالا ارتفاع را اندازه‌گیری کرده و **20 سانتی‌متر** به ارتفاع اضافه کنید تا از پوشش کامل پنجره اطمینان داشته باشید.\n"
+                "۲. عرض پنجره را اندازه‌گیری کنید و برای اینکه پرده به صورت کامل پنجره را بپوشاند، 15 سانتی‌متر به عرض اندازه‌گیری شده اضافه کنید.\n"
+                "۳. و حالا ارتفاع را اندازه‌گیری کرده و 20 سانتی‌متر به ارتفاع اضافه کنید تا از پوشش کامل پنجره اطمینان داشته باشید.\n"
                 "*(نکته: در صورتی که ریل پرده روی دیوار بالای پنجره نصب میشود 5 سانتیمتر دیگر به 20 سانتیمتر اضافه شود)*"
             )
         final_msg = tools_text + notes + detail
@@ -373,24 +373,24 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     else:  # kerkere
         if pos == "inside":
             detail = (
-                "📏 **آموزش اندازه‌گیری داخل چهارچوب (توکار) (کرکره فلزی 16میل - 25میل):**\n"
+                "📏 آموزش اندازه‌گیری داخل چهارچوب (توکار) (کرکره فلزی 16میل - 25میل):\n"
                 "۱. ابتدا متر فلزی را آماده کنید.\n"
-                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و **کوچک‌ترین عرض** را یادداشت کنید.\n"
-                "۳. از مقدار عرض **2 سانتی‌متر** جهت جا شدن پرده کم کنید و از ارتفاع **3 سانتی‌متر** کم کنید تا پرده کف پنجره قرار گیرد.\n"
+                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و کوچک‌ترین عرض را یادداشت کنید.\n"
+                "۳. از مقدار عرض 2 سانتی‌متر جهت جا شدن پرده کم کنید و از ارتفاع 3 سانتی‌متر کم کنید تا پرده کف پنجره قرار گیرد.\n"
                 "۴. به جهت بازشو پنجره و جهت قرارگیری زنجیر بازشوی پرده دقت کنید؛ طناب و میله خلاف بازشو و سمت قسمت ثابت پنجره قرار می‌گیرد.\n\n"
-                "⚠️ *نکات:* در حالت داخل چهارچوب (توکار) دقت کنید دستگیره پنجره به پرده گیر نکند."
+                "⚠️ نکات: در حالت داخل چهارچوب (توکار) دقت کنید دستگیره پنجره به پرده گیر نکند."
             )
         else:
             detail = (
-                "📏 **آموزش اندازه‌گیری خارج چهارچوب (روکار) (کرکره فلزی 16میل - 25میل):**\n"
+                "📏 آموزش اندازه‌گیری خارج چهارچوب (روکار) (کرکره فلزی 16میل - 25میل):\n"
                 "۱. ابتدا متر فلزی را آماده کنید.\n"
-                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و **کوچک‌ترین عرض** را یادداشت کنید.\n"
-                "۳. به عرض **10 سانتی‌متر** اضافه کنید و به ارتفاع هم **10 سانتی‌متر** اضافه کنید.\n"
+                "۲. عرض چهارچوب پنجره را به صورت کامل اندازه‌گیری کنید. برای مطمئن شدن پیشنهاد می‌شود عرض را در سه حالت (بالا، وسط و پایین) اندازه‌گیری کرده و کوچک‌ترین عرض را یادداشت کنید.\n"
+                "۳. به عرض 10 سانتی‌متر اضافه کنید و به ارتفاع هم 10 سانتی‌متر اضافه کنید.\n"
                 "۴. به جهت بازشو پنجره و جهت قرارگیری زنجیر بازشوی پرده دقت کنید؛ طناب و میله خلاف بازشو و سمت قسمت ثابت پنجره قرار می‌گیرد."
             )
         final_msg = tools_text + detail
 
-    await query.message.reply_text(append_footer(final_msg), parse_mode='Markdown')
+    await query.message.reply_text(append_footer(final_msg))
 
 # --- ثبت سفارش ---
 
@@ -589,7 +589,7 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.effective_chat.send_media_group(media=media_group)
 
-# --- راهنمایی و پیشنهاد نوع پرده (به‌روزرسانی شده) ---
+# --- راهنمایی و پیشنهاد نوع پرده ---
 
 async def suggest_curtain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
@@ -603,18 +603,18 @@ async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     
     if query.data == 'sugg_office':
-        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: **پرده کرکره فلزی 🏢** است."
+        msg = "پیشنهاد ما برای محیط‌های اداری و تجاری: پرده کرکره فلزی 🏢 است."
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری کرکره فلزی", callback_data="select_پرده کرکره فلزی")]
         ])
     else:
-        msg = "پیشنهاد ما برای محیط‌های مسکونی: **پرده شید 🪟** یا **پرده زبرا 🦓** است."
+        msg = "پیشنهاد ما برای محیط‌های مسکونی: پرده شید 🪟 یا پرده زبرا 🦓 است."
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده زبرا", callback_data="select_پرده زبرا")],
             [InlineKeyboardButton("📐 استعلام قیمت و اندازه‌گیری پرده شید ساده", callback_data="select_پرده شید ساده")]
         ])
         
-    await query.message.reply_text(append_footer(msg), reply_markup=kb, parse_mode='Markdown')
+    await query.message.reply_text(append_footer(msg), reply_markup=kb)
 
 # --- سایر متدها ---
 
