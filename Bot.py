@@ -29,7 +29,7 @@ PRODUCT_LINKS = {
     'پرده کرکره فلزی': 'https://farsgallery.com/product-category/blind/venetian-blinds/'
 }
 
-# --- لیست کامل لینک نمونه‌کارها از اکسل ---
+# --- لیست کامل لینک نمونه‌کارها ---
 PORTFOLIO_IMAGES = {
     'پرده زبرا': [
         "https://t.me/irandecoration_gallery/1263", "https://t.me/irandecoration_gallery/1264",
@@ -181,7 +181,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     if update.message:
-        await update.message.reply_text("منوی اصلی فعال شد:", reply_markup=PERSISTENT_KEYBOARD)
+        # ارسال کیبورد اصلی بدون پیغامی که پیام اضافی ایجاد کند
+        await update.message.reply_text("👇", reply_markup=PERSISTENT_KEYBOARD)
+    
     await send_welcome_message(update, context)
     return ConversationHandler.END
 
@@ -339,7 +341,7 @@ async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("زبرا - شیدرول ساده - شیدرول بلک‌اوت 🪟", callback_data="mtype_zebra_shid")],
         [InlineKeyboardButton("کرکره فلزی 16میل و 25میل 🏢", callback_data="mtype_kerkere")]
     ])
-    await msg_target.reply_text(append_specific_footer("📐 قصد اندازه‌گیری چه نوع پرده‌ای را دارید؟"), reply_markup=kb)
+    await msg_target.reply_text("📐 قصد اندازه‌گیری چه نوع پرده‌ای را دارید؟", reply_markup=kb)
 
 async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -347,7 +349,7 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     
     raw_type = query.data.replace("mtype_", "")
     
-    if raw_type in ["zebra_shid", "پرده شیدرول ساده", "پرده شیدرول بلک اوت", "پرده زبرا"]:
+    if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا"]:
         ctype = "zebra"
         label = "زبرا - شیدرول ساده - شیدرول بلک‌اوت"
     else:
@@ -358,7 +360,7 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
         [InlineKeyboardButton("داخل چهارچوب (توکار) 🚪", callback_data=f"mpos_{ctype}_inside")],
         [InlineKeyboardButton("خارج چهارچوب (روکار) 🖼", callback_data=f"mpos_{ctype}_outside")]
     ])
-    await query.message.reply_text(append_specific_footer(f"نصب {label} شما به چه صورت است؟"), reply_markup=kb)
+    await query.message.reply_text(f"نصب {label} شما به چه صورت است؟", reply_markup=kb)
 
 async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -417,7 +419,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
             )
         final_msg = tools_text + detail
 
-    await query.message.reply_text(append_specific_footer(final_msg))
+    await query.message.reply_text(final_msg)
 
 # --- ثبت سفارش ---
 
@@ -604,7 +606,7 @@ async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")]
     ])
     await msg_target.reply_text(
-        append_specific_footer("🖼 لطفاً جهت مشاهده نمونه‌کارها، نوع پرده را انتخاب کنید:"),
+        "🖼 لطفاً جهت مشاهده نمونه‌کارها، نوع پرده را انتخاب کنید:",
         reply_markup=portfolio_kb
     )
 
@@ -615,17 +617,17 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
-        await query.message.reply_text(append_specific_footer(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است."))
+        await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
         return
     
-    # ارسال هوشمند آلبوم‌ها (دسته ۱۰تایی برای جلوگیری از خطای تلگرام)
+    # ارسال هوشمند کلیه عکس‌ها در دسته‌های ۱۰تایی برای رعایت محدودیت تلگرام
     chunk_size = 10
     for chunk_idx in range(0, len(imgs), chunk_size):
         chunk = imgs[chunk_idx:chunk_idx + chunk_size]
         media_group = []
         for i, img_url in enumerate(chunk):
             if chunk_idx == 0 and i == 0:
-                caption = append_specific_footer(f"📸 نمونه کارهای {p_name}")
+                caption = f"📸 نمونه کارهای {p_name}"
                 media_group.append(InputMediaPhoto(media=img_url, caption=caption))
             else:
                 media_group.append(InputMediaPhoto(media=img_url))
@@ -645,7 +647,7 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🚕 کرایه حمل (شیراز): 150,000 تومان\n"
         "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
     )
-    await msg_target.reply_text(append_specific_footer(text))
+    await msg_target.reply_text(text)
 
 # --- راهنمایی و پیشنهاد نوع پرده ---
 
