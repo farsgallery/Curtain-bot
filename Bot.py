@@ -292,7 +292,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
-# --- سیستم آموزش اندازه‌گیری ---
+# --- سیستم آموزش اندازه‌گیری اصلاح شده ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -311,8 +311,9 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     
     raw_type = query.data.replace("mtype_", "")
     
-    if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا", "پرده زبرا و شید"]:
-        ctype = "zebra_shid"
+    # نگاشت نام‌های فارسی یا انگلیسی به کلید استاندارد کوتاه
+    if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا"]:
+        ctype = "zebra"
         label = "زبرا / شید / بلک‌اوت"
     else:
         ctype = "kerkere"
@@ -328,9 +329,10 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
+    # جداسازی امن دیتای کالبک
     data_parts = query.data.replace("mpos_", "").split("_")
     ctype = data_parts[0]
-    pos = data_parts[1]
+    pos = data_parts[1] if len(data_parts) > 1 else "outside"
 
     tools_text = (
         "🛠 **انتخاب وسیله اندازه‌گیری:**\n"
@@ -338,7 +340,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
         "نوارهای پارچه‌ای و مترهای خیاطی برای اندازه‌گیری پرده‌های پنجره مناسب نیستند و ممکن است اندکی خطا در اثر کشش ایجاد کنند.\n\n"
     )
 
-    if ctype == "zebra_shid":
+    if ctype == "zebra":
         notes = (
             "📌 **نکات مهم آماده‌سازی پرده زبرا و شید:**\n"
             "۱. پرده‌های زبرا به دلیل مکانیزم بالابر نیاز به محاسبة خاصی دارند.\n"
@@ -361,7 +363,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
             )
         final_msg = tools_text + notes + detail
 
-    else: # kerkere
+    else:  # kerkere
         if pos == "inside":
             detail = (
                 "📏 **آموزش اندازه‌گیری داخل چهارچوب - توکار (کرکره فلزی):**\n"
