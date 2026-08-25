@@ -180,7 +180,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_join_channel_message(update)
         return ConversationHandler.END
         
-    
     await send_welcome_message(update, context)
     return ConversationHandler.END
 
@@ -418,7 +417,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
 
     await query.message.reply_text(final_msg)
 
-# --- ثبت سفارش ---
+# --- ثبت سفارش و مشاوره مستقیم ---
 
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -447,18 +446,6 @@ async def get_ord_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_address'] = update.message.text
-    username = update.effective_user.username
-    user_handle = f"@{username}" if username else "بدون یوزرنیم"
-
-    admin_init_msg = (
-        "📥 سفارش / مشاوره جدید (مشخصات اولیه)\n\n"
-        f"👤 نام: {context.user_data.get('order_name')}\n"
-        f"📞 تلفن: {context.user_data.get('order_phone')}\n"
-        f"🪟 نوع پرده: {context.user_data.get('order_type')}\n"
-        f"📍 آدرس: {context.user_data.get('order_address')}\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
-    )
-    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_init_msg)
 
     next_step_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("میخوام عکس پنجره ارسال کنم 📸", callback_data="choice_send_photo")],
@@ -479,7 +466,7 @@ async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.data == "choice_send_photo":
         await query.message.reply_text(
             "📸 لطفاً تصویر پنجره مورد نظر را ارسال کنید:\n"
-            "⚠️ اگر چند تصویر دارید، همه را یکجا ارسال کنید."
+            "⚠️ اگر چند تصویر دارید، می‌توانید جداگانه ارسال کنید."
         )
         return ORD_PHOTO
     else:
@@ -493,6 +480,9 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption_text = (
         f"📸 تصویر ارسال شده توسط مشتری\n\n"
         f"👤 نام: {context.user_data.get('order_name')}\n"
+        f"📞 تلفن: {context.user_data.get('order_phone')}\n"
+        f"🪟 نوع پرده: {context.user_data.get('order_type')}\n"
+        f"📍 آدرس: {context.user_data.get('order_address')}\n"
         f"👤 یوزرنیم مشتری: {user_handle}"
     )
 
@@ -504,6 +494,9 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         doc_file_id = update.message.document.file_id
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
+    else:
+        await update.message.reply_text("⚠️ لطفاً تصویر معتبری ارسال کنید.")
+        return ORD_PHOTO
     
     await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
     return ORD_WIDTH
@@ -515,23 +508,43 @@ async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_height'] = update.message.text
-    width_val = context.user_data.get('order_width')
-    height_val = context.user_data.get('order_height')
+    width_val = context.user_data.get('order_width', 'ثبت نشده')
+    height_val = context.user_data.get('order_height', 'ثبت نشده')
+    name_val = context.user_data.get('order_name', 'ثبت نشده')
+    phone_val = context.user_data.get('order_phone', 'ثبت نشده')
+    type_val = context.user_data.get('order_type', 'ثبت نشده')
+    address_val = context.user_data.get('order_address', 'ثبت نشده')
+
     username = update.effective_user.username
     user_handle = f"@{username}" if username else "بدون یوزرنیم"
 
-    admin_dim_msg = (
-        "📐 ابعاد تکمیلی ثبت‌شده مشتری:\n\n"
-        f"👤 نام: {context.user_data.get('order_name')}\n"
+    # ارسال گزارش کامل نهایی برای ادمین
+    admin_final_msg = (
+        "📥 **ثبت سفارش / مشاوره جدید (تکمیل شد)**\n\n"
+        f"👤 نام: {name_val}\n"
+        f"📞 تلفن: {phone_val}\n"
+        f"🪟 نوع پرده: {type_val}\n"
+        f"📍 آدرس: {address_val}\n"
         f"📏 عرض: {width_val} سانتی‌متر\n"
         f"📏 ارتفاع: {height_val} سانتی‌متر\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
+        f"👤 یوزرنیم: {user_handle}"
     )
-    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_dim_msg)
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg)
+
+    # ارسال خلاصه مشخصات برای مشتری
+    customer_confirm_msg = (
+        "🎉 **سفارش / درخواست مشاوره شما با موفقیت ثبت شد!**\n\n"
+        "📋 **خلاصه اطلاعات ثبت شده:**\n"
+        f"👤 نام: {name_val}\n"
+        f"📞 شماره تماس: {phone_val}\n"
+        f"🪟 نوع پرده: {type_val}\n"
+        f"📍 آدرس: {address_val}\n"
+        f"📐 ابعاد: {width_val} در {height_val} سانتی‌متر\n\n"
+        "✨ کارشناسان ما جهت هماهنگی و تایید نهایی به زودی با شما تماس خواهند گرفت."
+    )
 
     await update.message.reply_text(
-        "✅ ابعاد و اندازه‌ها با موفقیت ثبت گردید.\n\n"
-        "🎉 کارشناسان ما جهت تأیید نهایی به زودی با شما تماس خواهند گرفت.",
+        customer_confirm_msg,
         reply_markup=PERSISTENT_KEYBOARD
     )
     return ConversationHandler.END
@@ -611,7 +624,6 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    # حذف پیشوند و ایموجی‌ها جهت بازیابی صحیح کلید از دیکشنری
     p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").strip()
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
@@ -619,7 +631,6 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
         return
     
-    # ارسال کلیه عکس‌ها در دسته‌های ۱۰تایی
     chunk_size = 10
     for chunk_idx in range(0, len(imgs), chunk_size):
         chunk = imgs[chunk_idx:chunk_idx + chunk_size]
