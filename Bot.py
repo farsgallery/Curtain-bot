@@ -174,25 +174,29 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = query.from_user.id
     
     if await is_user_member(user_id, context):
-        await query.message.reply_text(f"🗓 تاریخ: {get_jalali_date()}\n\n✅ عضویت شما تأیید شد!", reply_markup=PERSISTENT_KEYBOARD)
         await send_welcome_message(update, context)
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
 
 # ---------------------------------------------------------
-# بخش آموزش اندازه‌گیری (اصلاح‌شده و تفکیک‌شده)
+# بخش آموزش اندازه‌گیری (کاملاً اصلاح‌شده)
 # ---------------------------------------------------------
 async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    msg_target = update.message if update.message else (query.message if query else None)
     
-    if query:
-        await query.answer()
-        data = query.data
-    else:
-        data = "measure_main"
+    if not query:
+        keyboard = [
+            [InlineKeyboardButton("🏁 پرده زبرا / شیدرول", callback_data="type_zebra_shade")],
+            [InlineKeyboardButton("🏢 پرده کرکره فلزی 16 میل و 25 میل", callback_data="type_metal_blind")],
+            [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_main")]
+        ]
+        text = f"🗓 تاریخ: {get_jalali_date()}\n\n📏 برای کدام مدل پرده می‌خواهید اندازه‌گیری کنید؟" + BOT_FOOTER
+        await update.message.reply_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
 
-    # ۱. منوی اصلی انتخاب مدل پرده
+    await query.answer()
+    data = query.data
+
     if data == "measure_main":
         keyboard = [
             [InlineKeyboardButton("🏁 پرده زبرا / شیدرول", callback_data="type_zebra_shade")],
@@ -200,12 +204,8 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_main")]
         ]
         text = f"🗓 تاریخ: {get_jalali_date()}\n\n📏 برای کدام مدل پرده می‌خواهید اندازه‌گیری کنید؟" + BOT_FOOTER
-        if query:
-            await query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            await msg_target.reply_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(text=text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ۲. زیرمنوی زبرا و شیدرول
     elif data == "type_zebra_shade":
         keyboard = [
             [InlineKeyboardButton("🔸 داخل چهارچوب (توکار)", callback_data="zebra_inside")],
@@ -217,7 +217,6 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ۳. زیرمنوی کرکره فلزی
     elif data == "type_metal_blind":
         keyboard = [
             [InlineKeyboardButton("🔸 داخل چهارچوب (توکار)", callback_data="metal_inside")],
@@ -229,7 +228,6 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ۴. زبرا / شیدرول (توکار)
     elif data == "zebra_inside":
         text = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -242,20 +240,18 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
         await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ۵. زبرا / شیدرول (روکار)
     elif data == "zebra_outside":
         text = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
             "📏 **نحوه اندازه‌گیری پرده زبرا - شیدرول ساده - شیدرول بلک اوت (نصب خارج چهارچوب):**\n\n"
             "🛠 **ابزار اندازه‌گیری:**\nاستفاده از متر فلزی برای دقت بالا و جلوگیری از خطا ضروری است.\n\n"
             "📐 **عرض (پهنا):** عرض چهارچوب را دقیق اندازه گرفته و **۱۰ سانتی‌متر** (از هر طرف ۵ سانتی‌متر) اضافه کنید.\n"
-            "📏 **ارتفاع (بلندی):** ارتفاع چارچوب را دقیق اندازه گرفته و **۲۰ سانتی‌متر** به آن اضافه کنید."
+            "📏 **ارتفاع (بلندی):** ارتفاع چهارچوب را دقیق اندازه گرفته و **۲۰ سانتی‌متر** به آن اضافه کنید."
             + BOT_FOOTER
         )
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_zebra_shade")]]
         await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ۶. کرکره فلزی (توکار)
     elif data == "metal_inside":
         text = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -268,7 +264,6 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
         await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ۷. کرکره فلزی (روکار)
     elif data == "metal_outside":
         text = (
             f"🗓 تاریخ: {get_jalali_date()}\n\n"
@@ -281,7 +276,6 @@ async def measure_guide_callback(update: Update, context: ContextTypes.DEFAULT_T
         keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="type_metal_blind")]]
         await query.edit_message_text(text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ۸. بازگشت به منوی اصلی
     elif data == "back_to_main":
         await send_welcome_message(update, context)
 
@@ -846,7 +840,7 @@ def main():
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
     app.add_handler(CallbackQueryHandler(lambda u, c: None, pattern="^noop$"))
 
-    # ثبت اختصاصی و تفکیک‌شده هندلرهای اندازه‌گیری
+    # ثبت هندلرهای اندازه‌گیری
     app.add_handler(CallbackQueryHandler(
         measure_guide_callback, 
         pattern="^(measure_main|type_zebra_shade|type_metal_blind|zebra_inside|zebra_outside|metal_inside|metal_outside|back_to_main)$"
