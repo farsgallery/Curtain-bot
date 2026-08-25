@@ -179,10 +179,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(user.id, context):
         await send_join_channel_message(update)
         return ConversationHandler.END
-    
-    if update.message:
-        # ارسال کیبورد اصلی بدون پیغامی که پیام اضافی ایجاد کند
-        await update.message.reply_text("👇", reply_markup=PERSISTENT_KEYBOARD)
+        
     
     await send_welcome_message(update, context)
     return ConversationHandler.END
