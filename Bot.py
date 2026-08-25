@@ -761,7 +761,7 @@ async def post_init(application):
 # تابع اصلی اجرای ربات (main)
 # ---------------------------------------------------------
 def main():
-    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAEBL9XPR9JKGZoLyw4PPIAtV2UFPAQ6lkc")
+    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGTYSqVz0vEDrMHgZCLfDAyglGCAuvOb8g")
     
     app = ApplicationBuilder().token(TOKEN).post_init(post_init).build()
 
