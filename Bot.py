@@ -80,7 +80,6 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
-# فرمت عمومی پیام‌ها همراه با سربرگ تاریخ و پانویس معرفی ربات
 def append_footer(text: str) -> str:
     header = f"📅 تاریخ امروز: {get_jalali_date()}\n\n"
     footer = (
@@ -199,7 +198,6 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     }
     context.user_data['curtain_icon'] = icon_map.get(curtain_type, curtain_type)
 
-    # ارسال متن خام بدون تاریخ و پانویس موقع درخواست عرض
     await query.message.reply_text("لطفاً عرض پرده را به سانتی‌متر وارد کنید (مثال: 150):")
     return GET_WIDTH
 
@@ -208,7 +206,6 @@ async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         width = float(text)
         context.user_data['width'] = width
-        # ارسال متن خام بدون تاریخ و پانویس موقع درخواست ارتفاع
         await update.message.reply_text("لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثال: 200):")
         return GET_HEIGHT
     except ValueError:
@@ -230,28 +227,28 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             min_height, min_area = 200, 2.0
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("به خاطر قانون پرده شید کمتر از 200، من 200 در نظر گرفتم.")
+                rules_applied.append("به خاطر قانون پرده شید ارتفاع کمتر از 200، ما 200 در نظر میگیریم.")
             area = (width / 100) * (calc_height / 100)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده شید، من کمتر از متراژ 2 همان 2 در نظر گرفتم.")
+                rules_applied.append("به خاطر قانون پرده شید، متراژ کمتر 2 مترمربع همان 2 مترمربع در نظر میگیریم.")
 
         elif curtain_type == 'پرده زبرا':
             min_height, min_area = 150, 1.5
             calc_height = max(height, min_height)
             if height < min_height:
-                rules_applied.append("به خاطر قانون پرده زبرا کمتر از 150، من 150 در نظر گرفتم.")
+                rules_applied.append("به خاطر قانون پرده زبرا ارتفاع کمتر از 150، ما 150 در نظر میگیریم.")
             area = (width / 100) * (calc_height / 100)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده زبرا، من کمتر از متراژ 1.5 همان 1.5 در نظر گرفتم.")
+                rules_applied.append("به خاطر قانون پرده زبرا، متراژ کمتر 1.5 مترمربع همان 1.5 مترمربع در نظر میگیریم.")
 
         elif curtain_type == 'پرده کرکره فلزی':
             min_area = 1.5
             area = (width / 100) * (height / 100)
             calc_area = max(area, min_area)
             if area < min_area:
-                rules_applied.append("به خاطر قانون پرده کرکره فلزی، کمتر از 1.5 متر مربع همان 1.5 در نظر گرفتم.")
+                rules_applied.append("به خاطر قانون پرده کرکره فلزی، متراژ کمتر از 1.5 متر مربع همان 1.5 در نظر گرفتیم.")
 
         total_price = int(calc_area * unit_price)
         
@@ -289,7 +286,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        # نتیجه محاسبه همراه با تاریخ و پانویس کامل ارسال می‌شود
         await update.message.reply_text(append_footer(result_msg), reply_markup=inline_kb)
 
         if context.job_queue:
@@ -467,7 +463,6 @@ async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return ORD_PHOTO
     else:
-        # متن خام بدون تاریخ و پانویس موقع دریافت ابعاد
         await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
         return ORD_WIDTH
 
@@ -490,13 +485,11 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
         await update.message.reply_text(append_footer("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد."))
     
-    # متن خام بدون تاریخ و پانویس
     await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
     return ORD_WIDTH
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_width'] = update.message.text
-    # متن خام بدون تاریخ و پانویس
     await update.message.reply_text("📐 لطفاً ارتفاع پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
     return ORD_HEIGHT
 
