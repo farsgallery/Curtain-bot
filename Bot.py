@@ -80,7 +80,7 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
-# فرمت پیام‌ها: تاریخ در بالا و آدرس ربات در پایین
+# فرمت عمومی پیام‌ها همراه با سربرگ تاریخ و پانویس معرفی ربات
 def append_footer(text: str) -> str:
     header = f"📅 تاریخ امروز: {get_jalali_date()}\n\n"
     footer = (
@@ -139,11 +139,11 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     ])
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
-        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید."
+        "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید.\n\n"
+        "👇 یکی از گزینه ها را انتخاب کنید:"
     )
     if update.message:
-        await update.message.reply_text(append_footer(welcome_msg), reply_markup=PERSISTENT_KEYBOARD)
-        await update.message.reply_text(append_footer("👇 یکی از گزینه ها را انتخاب کنید:"), reply_markup=inline_kb)
+        await update.message.reply_text(append_footer(welcome_msg), reply_markup=inline_kb)
     elif update.callback_query:
         await update.callback_query.message.reply_text(append_footer(welcome_msg), reply_markup=inline_kb)
 
@@ -155,6 +155,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(user.id, context):
         await send_join_channel_message(update)
         return ConversationHandler.END
+    
+    if update.message:
+        await update.message.reply_text("منوی اصلی فعال شد:", reply_markup=PERSISTENT_KEYBOARD)
     await send_welcome_message(update, context)
     return ConversationHandler.END
 
@@ -196,7 +199,8 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     }
     context.user_data['curtain_icon'] = icon_map.get(curtain_type, curtain_type)
 
-    await query.message.reply_text(append_footer("لطفاً عرض پرده را به سانتی‌متر وارد کنید (مثال: 150):"))
+    # ارسال متن خام بدون تاریخ و پانویس موقع درخواست عرض
+    await query.message.reply_text("لطفاً عرض پرده را به سانتی‌متر وارد کنید (مثال: 150):")
     return GET_WIDTH
 
 async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -204,10 +208,11 @@ async def get_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         width = float(text)
         context.user_data['width'] = width
-        await update.message.reply_text(append_footer("لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثال: 200):"))
+        # ارسال متن خام بدون تاریخ و پانویس موقع درخواست ارتفاع
+        await update.message.reply_text("لطفاً ارتفاع پرده را به سانتی‌متر وارد کنید (مثال: 200):")
         return GET_HEIGHT
     except ValueError:
-        await update.message.reply_text(append_footer("⚠️ لطفاً عرض را به صورت عدد وارد کنید (مثال: 150)."))
+        await update.message.reply_text("⚠️ لطفاً عرض را به صورت عدد وارد کنید (مثال: 150).")
         return GET_WIDTH
 
 async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -284,6 +289,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
+        # نتیجه محاسبه همراه با تاریخ و پانویس کامل ارسال می‌شود
         await update.message.reply_text(append_footer(result_msg), reply_markup=inline_kb)
 
         if context.job_queue:
@@ -298,7 +304,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logging.error(f"Error calculating price: {e}")
-        await update.message.reply_text(append_footer("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200)."))
+        await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
 # --- سیستم آموزش اندازه‌گیری ---
@@ -461,7 +467,8 @@ async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return ORD_PHOTO
     else:
-        await query.message.reply_text(append_footer("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):"))
+        # متن خام بدون تاریخ و پانویس موقع دریافت ابعاد
+        await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
         return ORD_WIDTH
 
 async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -483,12 +490,14 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
         await update.message.reply_text(append_footer("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد."))
     
-    await update.message.reply_text(append_footer("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):"))
+    # متن خام بدون تاریخ و پانویس
+    await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
     return ORD_WIDTH
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_width'] = update.message.text
-    await update.message.reply_text(append_footer("📐 لطفاً ارتفاع پنجره را به سانتی‌متر وارد کنید (مثال: 220):"))
+    # متن خام بدون تاریخ و پانویس
+    await update.message.reply_text("📐 لطفاً ارتفاع پنجره را به سانتی‌متر وارد کنید (مثال: 220):")
     return ORD_HEIGHT
 
 async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
