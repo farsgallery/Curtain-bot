@@ -610,14 +610,16 @@ async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    p_name = query.data.replace("port_", "")
+    
+    # حذف پیشوند و ایموجی‌ها جهت بازیابی صحیح کلید از دیکشنری
+    p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").strip()
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
         await query.message.reply_text(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است.")
         return
     
-    # ارسال هوشمند کلیه عکس‌ها در دسته‌های ۱۰تایی برای رعایت محدودیت تلگرام
+    # ارسال کلیه عکس‌ها در دسته‌های ۱۰تایی
     chunk_size = 10
     for chunk_idx in range(0, len(imgs), chunk_size):
         chunk = imgs[chunk_idx:chunk_idx + chunk_size]
@@ -750,7 +752,7 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 def main():
-    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAHXysikIfnixDd6WTm1aSNYYzCjbr9jITc")
+    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAFCweKkZ6RrhOLiWHvTZGQB_FoL_MsznRk")
     app = ApplicationBuilder().token(TOKEN).build()
 
     MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
