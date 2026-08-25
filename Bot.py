@@ -1,54 +1,79 @@
-import os
-import math
 import logging
-import jdatetime
+import os
 import http.server
 import socketserver
 import threading
+import jdatetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, 
-    CallbackQueryHandler, ConversationHandler, filters, ContextTypes
+    ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler,
+    ContextTypes, filters, ConversationHandler
 )
 
-ADMIN_ID = 333050909  
-ADMIN_USERNAME = "@arhnh"
+# --- تنظیمات عمومی ---
+ADMIN_ID = 81105992
 CHANNEL_USERNAME = "@irandecoration_gallery"
-
-PRODUCT_LINKS = {
-    'پرده شید ساده': 'https://farsgallery.com/product-category/curtains/shid/',
-    'پرده شید بلک اوت': 'https://farsgallery.com/product-category/curtains/shid/',
-    'پرده زبرا': 'https://farsgallery.com/product-category/curtains/zebra/simple/',
-    'پرده کرکره فلزی': 'https://farsgallery.com/product-category/curtains/cercere/'
-}
+USER_LIST = {}
 
 PRICES = {
-    'پرده شید ساده': 1980000,
-    'پرده شید بلک اوت': 3350000,
-    'پرده زبرا': 2325000,
-    'پرده کرکره فلزی': 2970000
+    'پرده شید ساده': 1300000,
+    'پرده شید بلک اوت': 1600000,
+    'پرده زبرا': 1300000,
+    'پرده کرکره فلزی': 2100000
 }
 
-USER_LIST = {} 
+PRODUCT_LINKS = {
+    'پرده شید ساده': 'https://farsgallery.com/product-category/blind/shade-blind/',
+    'پرده شید بلک اوت': 'https://farsgallery.com/product-category/blind/blackout-blind/',
+    'پرده زبرا': 'https://farsgallery.com/product-category/blind/zebra-blind/',
+    'پرده کرکره فلزی': 'https://farsgallery.com/product-category/blind/venetian-blinds/'
+}
 
+# --- لیست کامل لینک نمونه‌کارها از اکسل ---
 PORTFOLIO_IMAGES = {
     'پرده زبرا': [
-        "AgACAgQAAxkBAAINgmqAN9MBBfL-fATjGc0bAvKXqcwkAAIHEGsbKiQBUD_cumH9NZmpAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINg2qAN9M86Ch402OO3kv9dngq5utnAAIIEGsbKiQBUDOPifTSJATYAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINhGqAN9MufbDbySYx6hiDtQheDuTbAAIJEGsbKiQBUNTZcyys1KRDAQADAgADeQADPQQ"
-    ],
-    'پرده کرکره فلزی': [
-        "AgACAgQAAxkBAAINiGqAOB48r5f99pD3JAoT3IJ4YA-FAAINEGsbKiQBUKYBX3ntTJLPAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINiWqAOB78ixk8x7bWq2mT0Az0mZZXAAIOEGsbKiQBUK8hQZZmc8J4AQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINimqAOB6Dw-IGQRft6PAnxfuXvXHYAAJsD2sb03MBUG8XGvaJAbRPAQADAgADeQADPQQ"
+        "https://t.me/irandecoration_gallery/1263", "https://t.me/irandecoration_gallery/1264",
+        "https://t.me/irandecoration_gallery/1265", "https://t.me/irandecoration_gallery/1266",
+        "https://t.me/irandecoration_gallery/1267", "https://t.me/irandecoration_gallery/1268",
+        "https://t.me/irandecoration_gallery/1269", "https://t.me/irandecoration_gallery/1270",
+        "https://t.me/irandecoration_gallery/1271", "https://t.me/irandecoration_gallery/1272",
+        "https://t.me/irandecoration_gallery/1273", "https://t.me/irandecoration_gallery/1274",
+        "https://t.me/irandecoration_gallery/1275", "https://t.me/irandecoration_gallery/1276",
+        "https://t.me/irandecoration_gallery/1277", "https://t.me/irandecoration_gallery/1278",
+        "https://t.me/irandecoration_gallery/1279", "https://t.me/irandecoration_gallery/1280",
+        "https://t.me/irandecoration_gallery/1281", "https://t.me/irandecoration_gallery/1282",
+        "https://t.me/irandecoration_gallery/1283", "https://t.me/irandecoration_gallery/1284"
     ],
     'پرده شید ساده': [
-        "AgACAgQAAxkBAAINjmqAOGeyv2OWNrt-3xAffcH-IgxPAAIQEGsbKiQBUHsdkKQY4gXPAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINj2qAOGe9JfdiH_qXeNihXAFeXHB1AAJwD2sb03MBUHsa4Jyg84PeAQADAgADeQADPQQ",
-        "AgACAgQAAxkBAAINkmqAOJe30jXWZERkxzIpnIbswDZNAAIREGsbKiQBUAkolxQ5GHJNAQADAgADeQADPQQ"
+        "https://t.me/irandecoration_gallery/1285", "https://t.me/irandecoration_gallery/1286",
+        "https://t.me/irandecoration_gallery/1287", "https://t.me/irandecoration_gallery/1288",
+        "https://t.me/irandecoration_gallery/1289", "https://t.me/irandecoration_gallery/1290",
+        "https://t.me/irandecoration_gallery/1291", "https://t.me/irandecoration_gallery/1292",
+        "https://t.me/irandecoration_gallery/1293", "https://t.me/irandecoration_gallery/1294",
+        "https://t.me/irandecoration_gallery/1295", "https://t.me/irandecoration_gallery/1296",
+        "https://t.me/irandecoration_gallery/1297", "https://t.me/irandecoration_gallery/1298",
+        "https://t.me/irandecoration_gallery/1299", "https://t.me/irandecoration_gallery/1300",
+        "https://t.me/irandecoration_gallery/1301", "https://t.me/irandecoration_gallery/1302",
+        "https://t.me/irandecoration_gallery/1303", "https://t.me/irandecoration_gallery/1304"
+    ],
+    'پرده کرکره فلزی': [
+        "https://t.me/irandecoration_gallery/1305", "https://t.me/irandecoration_gallery/1306",
+        "https://t.me/irandecoration_gallery/1307", "https://t.me/irandecoration_gallery/1308",
+        "https://t.me/irandecoration_gallery/1309", "https://t.me/irandecoration_gallery/1310",
+        "https://t.me/irandecoration_gallery/1311", "https://t.me/irandecoration_gallery/1312",
+        "https://t.me/irandecoration_gallery/1313", "https://t.me/irandecoration_gallery/1314",
+        "https://t.me/irandecoration_gallery/1315", "https://t.me/irandecoration_gallery/1316",
+        "https://t.me/irandecoration_gallery/1317", "https://t.me/irandecoration_gallery/1318",
+        "https://t.me/irandecoration_gallery/1319", "https://t.me/irandecoration_gallery/1320",
+        "https://t.me/irandecoration_gallery/1321", "https://t.me/irandecoration_gallery/1322",
+        "https://t.me/irandecoration_gallery/1323"
     ],
     'پرده شید بلک اوت': [
-        "AgACAgQAAxkBAAINgGqAN4xO0CG4N5YJ__6hjPGfSrDJAAIGEGsbKiQBUFBGGh9u51EmAQADAgADeQADPQQ"
+        "https://t.me/irandecoration_gallery/1324", "https://t.me/irandecoration_gallery/1325",
+        "https://t.me/irandecoration_gallery/1326", "https://t.me/irandecoration_gallery/1327",
+        "https://t.me/irandecoration_gallery/1328", "https://t.me/irandecoration_gallery/1329",
+        "https://t.me/irandecoration_gallery/1330", "https://t.me/irandecoration_gallery/1331",
+        "https://t.me/irandecoration_gallery/1332", "https://t.me/irandecoration_gallery/1333"
     ]
 }
 
@@ -80,7 +105,6 @@ PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
 def get_jalali_date():
     return jdatetime.datetime.now().strftime('%Y/%m/%d')
 
-# فوتر و هدر اختصاصی فقط برای ۴ بخش درخواستی
 def append_specific_footer(text: str) -> str:
     header = f"📅 تاریخ امروز: {get_jalali_date()}\n\n"
     footer = (
@@ -287,7 +311,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ])
 
-        # اضافه کردن تاریخ و ادرس ربات در محاسبه قیمت
         await update.message.reply_text(append_specific_footer(result_msg), reply_markup=inline_kb)
 
         if context.job_queue:
@@ -305,7 +328,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ لطفاً ارتفاع را به صورت عدد وارد کنید (مثال: 200).")
         return GET_HEIGHT
 
-# --- سیستم آموزش اندازه‌گیری (دارای تاریخ و آدرس ربات) ---
+# --- سیستم آموزش اندازه‌گیری ---
 
 async def show_measurement_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -374,7 +397,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
             )
         final_msg = tools_text + notes + detail
 
-    else:  # kerkere
+    else:
         if pos == "inside":
             detail = (
                 "📏 آموزش اندازه‌گیری داخل چهارچوب (توکار) (کرکره فلزی 16میل - 25میل):\n"
@@ -567,36 +590,49 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# --- نمونه‌کارها (دارای تاریخ و آدرس ربات) ---
+# --- منو و نمایش نمونه‌کارها ---
 
 async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = InlineKeyboardMarkup([
+    msg_target = update.message or update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    portfolio_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("پرده زبرا 🦓", callback_data="port_پرده زبرا")],
         [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="port_پرده شید ساده")],
-        [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")],
-        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")]
+        [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")],
+        [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")]
     ])
-    await update.message.reply_text(append_specific_footer("🖼 نمونه کار کدام محصول را می‌خواهید مشاهده کنید؟"), reply_markup=kb)
+    await msg_target.reply_text(
+        append_specific_footer("🖼 لطفاً جهت مشاهده نمونه‌کارها، نوع پرده را انتخاب کنید:"),
+        reply_markup=portfolio_kb
+    )
 
 async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     p_name = query.data.replace("port_", "")
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
+    
     if not imgs:
         await query.message.reply_text(append_specific_footer(f"⚠️ هنوز تصویری برای {p_name} ثبت نشده است."))
         return
     
-    media_group = []
-    for i, img_id in enumerate(imgs):
-        if i == 0:
-            media_group.append(InputMediaPhoto(media=img_id, caption=append_specific_footer(f"📸 نمونه کارهای {p_name}")))
-        else:
-            media_group.append(InputMediaPhoto(media=img_id))
+    # ارسال هوشمند آلبوم‌ها (دسته ۱۰تایی برای جلوگیری از خطای تلگرام)
+    chunk_size = 10
+    for chunk_idx in range(0, len(imgs), chunk_size):
+        chunk = imgs[chunk_idx:chunk_idx + chunk_size]
+        media_group = []
+        for i, img_url in enumerate(chunk):
+            if chunk_idx == 0 and i == 0:
+                caption = append_specific_footer(f"📸 نمونه کارهای {p_name}")
+                media_group.append(InputMediaPhoto(media=img_url, caption=caption))
+            else:
+                media_group.append(InputMediaPhoto(media=img_url))
+        
+        await update.effective_chat.send_media_group(media=media_group)
 
-    await update.effective_chat.send_media_group(media=media_group)
-
-# --- هزینه نصب و ارسال (دارای تاریخ و آدرس ربات) ---
+# --- هزینه نصب و ارسال ---
 
 async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
