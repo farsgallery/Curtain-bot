@@ -202,7 +202,7 @@ async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_T
     
     curtains_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="select_پرده شید ساده")],
-        [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="select_پرده شید بلک اوت")],
+        [InlineKeyboardButton("پرده شید بلک اوت 🕶️", callback_data="select_پرده شید بلک اوت")],
         [InlineKeyboardButton("پرده زبرا 🦓", callback_data="select_پرده زبرا")],
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="select_پرده کرکره فلزی")]
     ])
@@ -217,7 +217,7 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     
     icon_map = {
         'پرده شید ساده': 'پرده شید ساده 🪟',
-        'پرده شید بلک اوت': 'پرده شید بلک اوت 🌚',
+        'پرده شید بلک اوت': 'پرده شید بلک اوت 🕶️',
         'پرده زبرا': 'پرده زبرا 🦓',
         'پرده کرکره فلزی': 'پرده کرکره فلزی 🏢'
     }
@@ -629,7 +629,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="setp_پرده شید ساده")],
-            [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="setp_پرده شید بلک اوت")],
+            [InlineKeyboardButton("پرده شید بلک اوت 🕶️", callback_data="setp_پرده شید بلک اوت")],
             [InlineKeyboardButton("پرده زبرا 🦓", callback_data="setp_پرده زبرا")],
             [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="setp_پرده کرکره فلزی")]
         ])
@@ -664,7 +664,7 @@ async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("پرده زبرا 🦓", callback_data="port_پرده زبرا")],
         [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="port_پرده شید ساده")],
         [InlineKeyboardButton("پرده کرکره فلزی 🏢", callback_data="port_پرده کرکره فلزی")],
-        [InlineKeyboardButton("پرده شید بلک اوت 🌚", callback_data="port_پرده شید بلک اوت")]
+        [InlineKeyboardButton("پرده شید بلک اوت 🕶️", callback_data="port_پرده شید بلک اوت")]
     ])
     await msg_target.reply_text(
         "🖼 لطفاً جهت مشاهده نمونه‌کارها، نوع پرده را انتخاب کنید:",
@@ -675,7 +675,7 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").strip()
+    p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").replace(" 🕶️", "").strip()
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
