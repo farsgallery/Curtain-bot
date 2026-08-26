@@ -13,7 +13,7 @@ from telegram.ext import (
 # --- تنظیمات عمومی ---
 ADMIN_ID = 81105992
 CHANNEL_USERNAME = "@irandecoration_gallery"
-USER_LIST = {}  # {user_id: {"username": "@...", "first_name": "..."}}
+USER_LIST = {}  # {user_id: {"username": "@...", "name": "..."}}
 
 PRICES = {
     'پرده شید ساده': 1300000,
@@ -493,7 +493,7 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_file_id = update.message.photo[-1].file_id
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
-    elif update.message.document and update.message.document.mime_type.startswith('image/'):
+    elif update.message.document and update.message.document.mime_type and update.message.document.mime_type.startswith('image/'):
         doc_file_id = update.message.document.file_id
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
@@ -817,6 +817,9 @@ def main():
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
 
+    # اولویت بالاتر هندلرهای مدیریت و ادمین
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
+    
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
     app.add_handler(admin_conv)
@@ -839,7 +842,6 @@ def main():
     app.add_handler(CallbackQueryHandler(calc_services, pattern="^show_install_info$"))
     app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mtype_"))
     app.add_handler(CallbackQueryHandler(handle_mpos_selection, pattern="^mpos_"))
-    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
 
     print("Bot is running...")
