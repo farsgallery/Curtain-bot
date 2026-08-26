@@ -417,7 +417,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
             )
         final_msg = tools_text + detail
 
-    await query.message.reply_text(final_msg)
+    await query.message.reply_text(append_specific_footer(final_msg))
 
 # --- ثبت سفارش و مشاوره مستقیم ---
 
@@ -559,7 +559,6 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
         await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg, parse_mode='Markdown')
     except Exception as e:
         logging.error(f"Error sending order to admin: {e}")
-        # در صورت بروز مشکل در مارک‌داون، بدون فرمت ارسال می‌شود
         try:
             await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg)
         except Exception as ex:
@@ -625,7 +624,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             users_text = "👥 **لیست کاربران ربات:**\n\n"
             for uid, info in USER_LIST.items():
-                users_text += f"• نام: {info['name']} | یوزرنیم: {info['username']} | آیدی: `{uid}`\n"
+                users_text += f"• **نام:** {info['name']} | **یوزرنیم:** {info['username']} | **آیدی:** `{uid}`\n"
             await query.message.reply_text(users_text, parse_mode='Markdown')
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
@@ -709,7 +708,7 @@ async def calc_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🚕 کرایه حمل (شیراز): 150,000 تومان\n"
         "📦 ارسال به سایر شهرها: با تیپاکس (پس‌کرایه)"
     )
-    await msg_target.reply_text(text)
+    await msg_target.reply_text(append_specific_footer(text))
 
 # --- راهنمایی و پیشنهاد نوع پرده ---
 
