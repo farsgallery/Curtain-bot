@@ -13,7 +13,7 @@ from telegram.ext import (
 # --- تنظیمات عمومی ---
 ADMIN_ID = 81105992
 CHANNEL_USERNAME = "@irandecoration_gallery"
-USER_LIST = {}
+USER_LIST = {}  # {user_id: {"username": "@...", "first_name": "..."}}
 
 PRICES = {
     'پرده شید ساده': 1300000,
@@ -173,8 +173,8 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    user_handle = f"@{user.username}" if user.username else f"{user.first_name} (بدون یوزرنیم)"
-    USER_LIST[user.id] = user_handle
+    user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
+    USER_LIST[user.id] = {"username": user_handle, "name": user.first_name}
 
     if not await is_user_member(user.id, context):
         await send_join_channel_message(update)
@@ -193,6 +193,8 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_welcome_message(update, context)
     else:
         await query.answer("❌ شما هنوز در کانال عضو نشده‌اید!", show_alert=True)
+
+# --- استعلام قیمت ---
 
 async def show_curtains_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -243,7 +245,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         curtain_type = context.user_data.get('curtain_type', 'پرده زبرا')
         curtain_icon = context.user_data.get('curtain_icon', curtain_type)
         
-        unit_price = PRICES.get(curtain_type, 2000000)
+        unit_price = PRICES.get(curtain_type, 1300000)
         rules_applied = []
 
         if curtain_type in ['پرده شید ساده', 'پرده شید بلک اوت']:
@@ -474,25 +476,26 @@ async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ORD_WIDTH
 
 async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    username = update.effective_user.username
-    user_handle = f"@{username}" if username else "بدون یوزرنیم"
+    user = update.effective_user
+    username = f"@{user.username}" if user.username else "بدون یوزرنیم"
 
     caption_text = (
-        f"📸 تصویر ارسال شده توسط مشتری\n\n"
+        f"📸 **تصویر جدید از مشتری ثبت سفارش**\n\n"
         f"👤 نام: {context.user_data.get('order_name')}\n"
         f"📞 تلفن: {context.user_data.get('order_phone')}\n"
         f"🪟 نوع پرده: {context.user_data.get('order_type')}\n"
         f"📍 آدرس: {context.user_data.get('order_address')}\n"
-        f"👤 یوزرنیم مشتری: {user_handle}"
+        f"🆔 آیدی عددی: `{user.id}`\n"
+        f"👤 یوزرنیم: {username}"
     )
 
     if update.message.photo:
         photo_file_id = update.message.photo[-1].file_id
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text)
+        await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
     elif update.message.document and update.message.document.mime_type.startswith('image/'):
         doc_file_id = update.message.document.file_id
-        await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text)
+        await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
         await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
     else:
         await update.message.reply_text("⚠️ لطفاً تصویر معتبری ارسال کنید.")
@@ -515,26 +518,27 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     type_val = context.user_data.get('order_type', 'ثبت نشده')
     address_val = context.user_data.get('order_address', 'ثبت نشده')
 
-    username = update.effective_user.username
-    user_handle = f"@{username}" if username else "بدون یوزرنیم"
+    user = update.effective_user
+    user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
 
-    # ارسال گزارش کامل نهایی برای ادمین
+    # فرم کامل ارسال برای ادمین
     admin_final_msg = (
         "📥 **ثبت سفارش / مشاوره جدید (تکمیل شد)**\n\n"
-        f"👤 نام: {name_val}\n"
-        f"📞 تلفن: {phone_val}\n"
-        f"🪟 نوع پرده: {type_val}\n"
-        f"📍 آدرس: {address_val}\n"
-        f"📏 عرض: {width_val} سانتی‌متر\n"
-        f"📏 ارتفاع: {height_val} سانتی‌متر\n"
-        f"👤 یوزرنیم: {user_handle}"
+        f"👤 **نام:** {name_val}\n"
+        f"📞 **تلفن:** {phone_val}\n"
+        f"🪟 **نوع پرده:** {type_val}\n"
+        f"📍 **آدرس:** {address_val}\n"
+        f"📏 **عرض:** {width_val} سانتی‌متر\n"
+        f"📏 **ارتفاع:** {height_val} سانتی‌متر\n\n"
+        f"🆔 **آیدی عددی:** `{user.id}`\n"
+        f"👤 **یوزرنیم:** {user_handle}"
     )
-    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg)
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg, parse_mode='Markdown')
 
-    # ارسال خلاصه مشخصات برای مشتری
+    # متن خلاصه تایید برای مشتری
     customer_confirm_msg = (
         "🎉 **سفارش / درخواست مشاوره شما با موفقیت ثبت شد!**\n\n"
-        "📋 **خلاصه اطلاعات ثبت شده:**\n"
+        "📋 **خلاصه اطلاعات شما:**\n"
         f"👤 نام: {name_val}\n"
         f"📞 شماره تماس: {phone_val}\n"
         f"🪟 نوع پرده: {type_val}\n"
@@ -545,11 +549,12 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         customer_confirm_msg,
-        reply_markup=PERSISTENT_KEYBOARD
+        reply_markup=PERSISTENT_KEYBOARD,
+        parse_mode='Markdown'
     )
     return ConversationHandler.END
 
-# --- پنل مدیریت ---
+# --- پنل مدیریت کامل ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -557,9 +562,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 آمار ربات", callback_data="admin_stats")],
         [InlineKeyboardButton("💵 تغییر قیمت محصولات", callback_data="admin_change_price")],
-        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم)", callback_data="admin_users")]
+        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم و آیدی)", callback_data="admin_users")]
     ])
-    await update.message.reply_text("⚙️ پنل مدیریت فارس گالری:", reply_markup=kb)
+    await update.message.reply_text("⚙️ **پنل مدیریت فارس گالری:**", reply_markup=kb, parse_mode='Markdown')
 
 async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -568,13 +573,15 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "admin_stats":
-        await query.message.reply_text(f"📊 تعداد کل کاربران: {len(USER_LIST)} نفر")
+        await query.message.reply_text(f"📊 **تعداد کل کاربران استارت زده:** {len(USER_LIST)} نفر", parse_mode='Markdown')
     elif query.data == "admin_users":
         if not USER_LIST:
             await query.message.reply_text("👥 هیچ کاربر فعالی ثبت نشده است.")
         else:
-            users_text = "👥 لیست یوزرنیم کاربران ربات:\n\n" + "\n".join([f"• {u}" for u in USER_LIST.values()])
-            await query.message.reply_text(users_text)
+            users_text = "👥 **لیست کاربران ربات:**\n\n"
+            for uid, info in USER_LIST.items():
+                users_text += f"• نام: {info['name']} | یوزرنیم: {info['username']} | آیدی: `{uid}`\n"
+            await query.message.reply_text(users_text, parse_mode='Markdown')
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="setp_پرده شید ساده")],
@@ -589,7 +596,7 @@ async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     p_name = query.data.replace("setp_", "")
     context.user_data['editing_product'] = p_name
-    await query.message.reply_text(f"قیمت جدید {p_name} را به تومان وارد کنید:")
+    await query.message.reply_text(f"قیمت جدید {p_name} را به تومان (فقط عدد) وارد کنید:")
     return SET_PR_VAL
 
 async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
