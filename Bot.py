@@ -16,10 +16,10 @@ CHANNEL_USERNAME = "@irandecoration_gallery"
 USER_LIST = {}  # {user_id: {"username": "@...", "name": "..."}}
 
 PRICES = {
-    'پرده شید ساده': 1980000,
-    'پرده شید بلک اوت': 3350000,
-    'پرده زبرا': 2325000,
-    'پرده کرکره فلزی': 2970000
+    'پرده شید ساده': 1300000,
+    'پرده شید بلک اوت': 1600000,
+    'پرده زبرا': 1300000,
+    'پرده کرکره فلزی': 2100000
 }
 
 PRODUCT_LINKS = {
@@ -212,7 +212,7 @@ async def select_curtain_callback(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
     
-    curtain_type = query.data.replace("select_", "")
+    curtain_type = query.data.replace("select_", "").strip()
     context.user_data['curtain_type'] = curtain_type
     
     icon_map = {
@@ -345,7 +345,7 @@ async def handle_mtype_selection(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     
-    raw_type = query.data.replace("mtype_", "")
+    raw_type = query.data.replace("mtype_", "").strip()
     
     if raw_type in ["zebra_shid", "پرده شید ساده", "پرده شید بلک اوت", "پرده زبرا"]:
         ctype = "zebra"
@@ -638,7 +638,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_price_to_change(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    p_name = query.data.replace("setp_", "")
+    p_name = query.data.replace("setp_", "").strip()
     context.user_data['editing_product'] = p_name
     await query.message.reply_text(f"قیمت جدید {p_name} را به تومان (فقط عدد) وارد کنید:")
     return SET_PR_VAL
@@ -653,7 +653,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# --- منو و نمایش نمونه‌کارها ---
+# --- منو و نمایش نمونه‌کارها (اصلاح شده و بدون اختلال) ---
 
 async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -675,7 +675,8 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").replace(" 🕶️", "").strip()
+    # جداسازی دقیق کلید بدون تأثیرپذیری از ایموجی
+    p_name = query.data.replace("port_", "").strip()
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
@@ -742,7 +743,7 @@ async def handle_suggestion_callback(update: Update, context: ContextTypes.DEFAU
 async def show_colors_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    curtain_type = query.data.replace("colors_", "")
+    curtain_type = query.data.replace("colors_", "").strip()
 
     if curtain_type in ['پرده شید ساده', 'پرده شید بلک اوت']:
         colors = ["⚪️ سفید", "🩶 طوسی", "🏷 کرم"]
