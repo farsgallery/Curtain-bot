@@ -675,7 +675,9 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    p_name = query.data.replace("port_", "").replace(" 🦓", "").replace(" 🪟", "").replace(" 🏢", "").replace(" 🌚", "").strip()
+  p_name = query.data.replace("port_", "")
+for emoji in [" 🦓", " 🪟", " 🏢", " 🌚", "🌚"]: p_name = p_name.replace(emoji, "")
+p_name = p_name.strip()
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
