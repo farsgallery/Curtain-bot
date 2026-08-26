@@ -863,7 +863,8 @@ def main():
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
 
     print("Bot is running...")
-    app.run_polling()
+    # اضافه شدن stop_signals=None برای جلوگیری از کرش هنگام اجرای وب‌سرور در ترید مجزا
+    app.run_polling(stop_signals=None)
 
 if __name__ == '__main__':
     main()
