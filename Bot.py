@@ -564,12 +564,18 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
         "✨ کارشناسان ما جهت هماهنگی و تایید نهایی به زودی با شما تماس خواهند گرفت."
     )
 
-    msg_target = update.message or update.callback_query.message
-    await msg_target.reply_text(
-        customer_confirm_msg,
-        reply_markup=PERSISTENT_KEYBOARD,
-        parse_mode='Markdown'
-    )
+    if update.callback_query:
+        await update.callback_query.message.reply_text(
+            customer_confirm_msg,
+            reply_markup=PERSISTENT_KEYBOARD,
+            parse_mode='Markdown'
+        )
+    elif update.message:
+        await update.message.reply_text(
+            customer_confirm_msg,
+            reply_markup=PERSISTENT_KEYBOARD,
+            parse_mode='Markdown'
+        )
     return ConversationHandler.END
 
 # --- پنل مدیریت کامل ---
