@@ -91,7 +91,7 @@ threading.Thread(target=run_dummy_server, daemon=True).start()
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 GET_WIDTH, GET_HEIGHT = range(2)
-ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_PHOTO_CHOICE, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
+ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_OPTIONS, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
 
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
@@ -423,6 +423,7 @@ async def handle_mpos_selection(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def start_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
+    context.user_data.clear()
     await msg_target.reply_text("📝 جهت ثبت سفارش یا مشاوره، لطفاً نام و نام خانوادگی خود را وارد کنید:")
     return ORD_NAME
 
@@ -446,45 +447,53 @@ async def get_ord_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📍 لطفاً شهر و آدرس خود را وارد کنید:")
     return ORD_ADDRESS
 
-async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['order_address'] = update.message.text
-
-    next_step_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("میخوام عکس پنجره ارسال کنم 📸", callback_data="choice_send_photo")],
-        [InlineKeyboardButton("میخوام اندازه پنجره رو بگم 📐", callback_data="choice_send_dim")]
+async def show_order_options_menu(update_or_msg, context: ContextTypes.DEFAULT_TYPE):
+    options_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("ارسال عکس پنجره 📸", callback_data="opt_send_photo")],
+        [InlineKeyboardButton("وارد کردن ابعاد (عرض و ارتفاع) 📐", callback_data="opt_send_dim")],
+        [InlineKeyboardButton("✅ ثبت نهایی سفارش", callback_data="opt_finish_order")]
     ])
     
-    await update.message.reply_text(
-        "✅ مشخصات شما با موفقیت ثبت شد.\n\n"
-        "لطفاً گام بعدی خود را انتخاب کنید:",
-        reply_markup=next_step_kb
+    msg_text = (
+        "✅ مشخصات شما ثبت شد.\n\n"
+        "اکنون می‌توانید به دلخواه **عکس پنجره** یا **ابعاد** را وارد کنید، یا در صورت تمام شدن مراحل روی **ثبت نهایی سفارش** بزنید:"
     )
-    return ORD_PHOTO_CHOICE
+    if hasattr(update_or_msg, 'reply_text'):
+        await update_or_msg.reply_text(msg_text, reply_markup=options_kb)
+    else:
+        await update_or_msg.message.reply_text(msg_text, reply_markup=options_kb)
 
-async def handle_photo_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def get_ord_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['order_address'] = update.message.text
+    await show_order_options_menu(update.message, context)
+    return ORD_OPTIONS
+
+async def handle_order_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    if query.data == "choice_send_photo":
+    if query.data == "opt_send_photo":
         await query.message.reply_text(
             "📸 لطفاً تصویر پنجره مورد نظر را ارسال کنید:\n"
-            "⚠️ اگر چند تصویر دارید، می‌توانید جداگانه ارسال کنید."
+            "(می‌توانید عکس را فرستاده و سپس مراحل را ادامه دهید)"
         )
         return ORD_PHOTO
-    else:
+    elif query.data == "opt_send_dim":
         await query.message.reply_text("📐 لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
         return ORD_WIDTH
+    elif query.data == "opt_finish_order":
+        return await finalize_direct_order(update, context)
 
 async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     username = f"@{user.username}" if user.username else "بدون یوزرنیم"
 
     caption_text = (
-        f"📸 **تصویر جدید از مشتری ثبت سفارش**\n\n"
-        f"👤 نام: {context.user_data.get('order_name')}\n"
-        f"📞 تلفن: {context.user_data.get('order_phone')}\n"
-        f"🪟 نوع پرده: {context.user_data.get('order_type')}\n"
-        f"📍 آدرس: {context.user_data.get('order_address')}\n"
+        f"📸 **تصویر ارسالی از مشتری**\n\n"
+        f"👤 نام: {context.user_data.get('order_name', 'ثبت نشده')}\n"
+        f"📞 تلفن: {context.user_data.get('order_phone', 'ثبت نشده')}\n"
+        f"🪟 نوع پرده: {context.user_data.get('order_type', 'ثبت نشده')}\n"
+        f"📍 آدرس: {context.user_data.get('order_address', 'ثبت نشده')}\n"
         f"🆔 آیدی عددی: `{user.id}`\n"
         f"👤 یوزرنیم: {username}"
     )
@@ -492,17 +501,18 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
         photo_file_id = update.message.photo[-1].file_id
         await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
+        await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
     elif update.message.document and update.message.document.mime_type and update.message.document.mime_type.startswith('image/'):
         doc_file_id = update.message.document.file_id
         await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ عکس با موفقیت دریافت و برای کارشناس ارسال شد.")
+        await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
     else:
         await update.message.reply_text("⚠️ لطفاً تصویر معتبری ارسال کنید.")
         return ORD_PHOTO
-    
-    await update.message.reply_text("📐 حالا لطفاً عرض پنجره را به سانتی‌متر وارد کنید (مثال: 180):")
-    return ORD_WIDTH
+
+    context.user_data['has_photo'] = True
+    await show_order_options_menu(update.message, context)
+    return ORD_OPTIONS
 
 async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_width'] = update.message.text
@@ -511,12 +521,18 @@ async def get_ord_width(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['order_height'] = update.message.text
+    await update.message.reply_text("✅ ابعاد با موفقیت ثبت شد.")
+    await show_order_options_menu(update.message, context)
+    return ORD_OPTIONS
+
+async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     width_val = context.user_data.get('order_width', 'ثبت نشده')
     height_val = context.user_data.get('order_height', 'ثبت نشده')
     name_val = context.user_data.get('order_name', 'ثبت نشده')
     phone_val = context.user_data.get('order_phone', 'ثبت نشده')
     type_val = context.user_data.get('order_type', 'ثبت نشده')
     address_val = context.user_data.get('order_address', 'ثبت نشده')
+    has_photo = "بله 📸" if context.user_data.get('has_photo') else "خیر"
 
     user = update.effective_user
     user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
@@ -528,8 +544,9 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📞 **تلفن:** {phone_val}\n"
         f"🪟 **نوع پرده:** {type_val}\n"
         f"📍 **آدرس:** {address_val}\n"
-        f"📏 **عرض:** {width_val} سانتی‌متر\n"
-        f"📏 **ارتفاع:** {height_val} سانتی‌متر\n\n"
+        f"📏 **عرض:** {width_val}\n"
+        f"📏 **ارتفاع:** {height_val}\n"
+        f"🖼 **ارسال عکس:** {has_photo}\n\n"
         f"🆔 **آیدی عددی:** `{user.id}`\n"
         f"👤 **یوزرنیم:** {user_handle}"
     )
@@ -543,11 +560,12 @@ async def get_ord_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📞 شماره تماس: {phone_val}\n"
         f"🪟 نوع پرده: {type_val}\n"
         f"📍 آدرس: {address_val}\n"
-        f"📐 ابعاد: {width_val} در {height_val} سانتی‌متر\n\n"
+        f"📐 ابعاد: {width_val} × {height_val}\n\n"
         "✨ کارشناسان ما جهت هماهنگی و تایید نهایی به زودی با شما تماس خواهند گرفت."
     )
 
-    await update.message.reply_text(
+    msg_target = update.message or update.callback_query.message
+    await msg_target.reply_text(
         customer_confirm_msg,
         reply_markup=PERSISTENT_KEYBOARD,
         parse_mode='Markdown'
@@ -796,8 +814,8 @@ def main():
             ORD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_phone)],
             ORD_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_type)],
             ORD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(MENU_REGEX), get_ord_address)],
-            ORD_PHOTO_CHOICE: [
-                CallbackQueryHandler(handle_photo_choice, pattern="^(choice_send_photo|choice_send_dim)$")
+            ORD_OPTIONS: [
+                CallbackQueryHandler(handle_order_options, pattern="^(opt_send_photo|opt_send_dim|opt_finish_order)$")
             ],
             ORD_PHOTO: [
                 MessageHandler(filters.PHOTO | filters.Document.IMAGE, get_ord_photo)
