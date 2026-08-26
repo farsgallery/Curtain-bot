@@ -498,17 +498,21 @@ async def get_ord_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👤 یوزرنیم: {username}"
     )
 
-    if update.message.photo:
-        photo_file_id = update.message.photo[-1].file_id
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
-    elif update.message.document and update.message.document.mime_type and update.message.document.mime_type.startswith('image/'):
-        doc_file_id = update.message.document.file_id
-        await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
-    else:
-        await update.message.reply_text("⚠️ لطفاً تصویر معتبری ارسال کنید.")
-        return ORD_PHOTO
+    try:
+        if update.message.photo:
+            photo_file_id = update.message.photo[-1].file_id
+            await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo_file_id, caption=caption_text, parse_mode='Markdown')
+            await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
+        elif update.message.document and update.message.document.mime_type and update.message.document.mime_type.startswith('image/'):
+            doc_file_id = update.message.document.file_id
+            await context.bot.send_document(chat_id=ADMIN_ID, document=doc_file_id, caption=caption_text, parse_mode='Markdown')
+            await update.message.reply_text("✅ عکس با موفقیت برای کارشناس ارسال شد.")
+        else:
+            await update.message.reply_text("⚠️ لطفاً تصویر معتبری ارسال کنید.")
+            return ORD_PHOTO
+    except Exception as e:
+        logging.error(f"Error sending photo to admin: {e}")
+        await update.message.reply_text("✅ عکس ثبت شد.")
 
     context.user_data['has_photo'] = True
     await show_order_options_menu(update.message, context)
@@ -550,7 +554,16 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
         f"🆔 **آیدی عددی:** `{user.id}`\n"
         f"👤 **یوزرنیم:** {user_handle}"
     )
-    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg, parse_mode='Markdown')
+    
+    try:
+        await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg, parse_mode='Markdown')
+    except Exception as e:
+        logging.error(f"Error sending order to admin: {e}")
+        # در صورت بروز مشکل در مارک‌داون، بدون فرمت ارسال می‌شود
+        try:
+            await context.bot.send_message(chat_id=ADMIN_ID, text=admin_final_msg)
+        except Exception as ex:
+            logging.error(f"Fallback admin message failed: {ex}")
 
     # متن خلاصه تایید برای مشتری
     customer_confirm_msg = (
@@ -564,18 +577,26 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
         "✨ کارشناسان ما جهت هماهنگی و تایید نهایی به زودی با شما تماس خواهند گرفت."
     )
 
-    if update.callback_query:
-        await update.callback_query.message.reply_text(
-            customer_confirm_msg,
-            reply_markup=PERSISTENT_KEYBOARD,
-            parse_mode='Markdown'
-        )
-    elif update.message:
-        await update.message.reply_text(
-            customer_confirm_msg,
-            reply_markup=PERSISTENT_KEYBOARD,
-            parse_mode='Markdown'
-        )
+    try:
+        if update.callback_query:
+            await update.callback_query.message.reply_text(
+                customer_confirm_msg,
+                reply_markup=PERSISTENT_KEYBOARD,
+                parse_mode='Markdown'
+            )
+        elif update.message:
+            await update.message.reply_text(
+                customer_confirm_msg,
+                reply_markup=PERSISTENT_KEYBOARD,
+                parse_mode='Markdown'
+            )
+    except Exception as e:
+        logging.error(f"Error sending confirmation to customer: {e}")
+        if update.callback_query:
+            await update.callback_query.message.reply_text(customer_confirm_msg, reply_markup=PERSISTENT_KEYBOARD)
+        elif update.message:
+            await update.message.reply_text(customer_confirm_msg, reply_markup=PERSISTENT_KEYBOARD)
+
     return ConversationHandler.END
 
 # --- پنل مدیریت کامل ---
@@ -869,7 +890,6 @@ def main():
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
 
     print("Bot is running...")
-    # اضافه شدن stop_signals=None برای جلوگیری از کرش هنگام اجرای وب‌سرور در ترید مجزا
     app.run_polling(stop_signals=None)
 
 if __name__ == '__main__':
