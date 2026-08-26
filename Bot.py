@@ -11,7 +11,7 @@ from telegram.ext import (
 )
 
 # --- تنظیمات عمومی ---
-ADMIN_ID = 81105992
+ADMIN_ID = 333050909
 CHANNEL_USERNAME = "@irandecoration_gallery"
 USER_LIST = {}  # {user_id: {"username": "@...", "name": "..."}}
 
