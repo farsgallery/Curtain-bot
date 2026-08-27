@@ -16,10 +16,10 @@ CHANNEL_USERNAME = "@irandecoration_gallery"
 USER_LIST = {}  # {user_id: {"username": "@...", "name": "..."}}
 
 PRICES = {
-    'پرده شید ساده': 1300000,
-    'پرده شید بلک اوت': 1600000,
-    'پرده زبرا': 1300000,
-    'پرده کرکره فلزی': 2100000
+    'پرده شید ساده': 1980000,
+    'پرده شید بلک اوت': 3350000,
+    'پرده زبرا': 2325000,
+    'پرده کرکره فلزی': 2970000
 }
 
 PRODUCT_LINKS = {
@@ -174,7 +174,7 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
-    USER_LIST[user.id] = {"username": user_handle, "name": user.first_name}
+    USER_LIST[user.id] = {"username": user_handle, "name": user.first_name or "کاربر"}
 
     if not await is_user_member(user.id, context):
         await send_join_channel_message(update)
@@ -541,7 +541,6 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
     user = update.effective_user
     user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
 
-    # فرم کامل ارسال برای ادمین
     admin_final_msg = (
         "📥 **ثبت سفارش / مشاوره جدید (تکمیل شد)**\n\n"
         f"👤 **نام:** {name_val}\n"
@@ -564,7 +563,6 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
         except Exception as ex:
             logging.error(f"Fallback admin message failed: {ex}")
 
-    # متن خلاصه تایید برای مشتری
     customer_confirm_msg = (
         "🎉 **سفارش / درخواست مشاوره شما با موفقیت ثبت شد!**\n\n"
         "📋 **خلاصه اطلاعات شما:**\n"
@@ -598,7 +596,7 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
 
     return ConversationHandler.END
 
-# --- پنل مدیریت کامل ---
+# --- پنل مدیریت کامل (اصلاح شده) ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -618,14 +616,23 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "admin_stats":
         await query.message.reply_text(f"📊 **تعداد کل کاربران استارت زده:** {len(USER_LIST)} نفر", parse_mode='Markdown')
+        
     elif query.data == "admin_users":
         if not USER_LIST:
             await query.message.reply_text("👥 هیچ کاربر فعالی ثبت نشده است.")
         else:
-            users_text = "👥 **لیست کاربران ربات:**\n\n"
-            for uid, info in USER_LIST.items():
-                users_text += f"• **نام:** {info['name']} | **یوزرنیم:** {info['username']} | **آیدی:** `{uid}`\n"
-            await query.message.reply_text(users_text, parse_mode='Markdown')
+            # ارسال دسته‌ای کاربران برای جلوگیری از ارور محدودیت طول متن تلگرام
+            items = list(USER_LIST.items())
+            chunk_size = 20
+            for i in range(0, len(items), chunk_size):
+                chunk = items[i:i + chunk_size]
+                users_text = f"👥 **لیست کاربران (بخش {i//chunk_size + 1}):**\n\n"
+                for uid, info in chunk:
+                    name = info.get('name', 'کاربر')
+                    uname = info.get('username', 'بدون یوزرنیم')
+                    users_text += f"• **نام:** {name} | **یوزرنیم:** {uname} | **آیدی:** `{uid}`\n"
+                await query.message.reply_text(users_text, parse_mode='Markdown')
+                
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("پرده شید ساده 🪟", callback_data="setp_پرده شید ساده")],
@@ -653,7 +660,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# --- منو و نمایش نمونه‌کارها (اصلاح شده و بدون اختلال) ---
+# --- منو و نمایش نمونه‌کارها (اصلاح شده و قطعی) ---
 
 async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -675,8 +682,9 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    # جداسازی دقیق کلید بدون تأثیرپذیری از ایموجی
+    # جداسازی پاکیزه اسم محصول بدون کاراکترهای اضافه
     p_name = query.data.replace("port_", "").strip()
+    
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
@@ -694,7 +702,10 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 media_group.append(InputMediaPhoto(media=img_url))
         
-        await update.effective_chat.send_media_group(media=media_group)
+        try:
+            await context.bot.send_media_group(chat_id=update.effective_chat.id, media=media_group)
+        except Exception as e:
+            logging.error(f"Error sending photos: {e}")
 
 # --- هزینه نصب و ارسال ---
 
@@ -862,7 +873,6 @@ def main():
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
 
-    # اولویت بالاتر هندلرهای مدیریت و ادمین
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     
     app.add_handler(price_conv_handler)
