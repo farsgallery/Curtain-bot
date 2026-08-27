@@ -188,9 +188,13 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
         "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید.\n\n"
         "👇 یکی از گزینه ها را انتخاب کنید:"
     )
+    
+    # ارسال کیبورد اصلی ثابت جهت تثبیت دکمه‌های منو در تمامی پلتفرم‌ها (آیفون، اندروید و ویندوز)
     if update.message:
-        await update.message.reply_text(welcome_msg, reply_markup=inline_kb)
+        await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
+        await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
     elif update.callback_query:
+        await update.callback_query.message.reply_text("منوی اصلی فعال شد ⚡️", reply_markup=PERSISTENT_KEYBOARD)
         await update.callback_query.message.reply_text(welcome_msg, reply_markup=inline_kb)
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
