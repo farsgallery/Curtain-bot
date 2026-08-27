@@ -655,8 +655,17 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chunk = items[i:i + chunk_size]
                 users_text = f"👥 **لیست کاربران (بخش {i//chunk_size + 1}):**\n\n"
                 for uid, uname in chunk:
-                    users_text += f"• **یوزرنیم:** {uname} | **آیدی:** `{uid}`\n"
-                await query.message.reply_text(users_text, parse_mode='Markdown')
+                    # اسکیپ کردن کاراکترهای خاص برای جلوگیری از خطای Markdown تلگرام
+                    safe_uname = uname.replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+                    users_text += f"• **یوزرنیم:** {safe_uname} | **آیدی:** `{uid}`\n"
+                
+                try:
+                    await query.message.reply_text(users_text, parse_mode='Markdown')
+                except Exception as e:
+                    logging.error(f"Error sending users list: {e}")
+                    # ارسال متن ساده در صورت بروز خطای قالب‌بندی
+                    plain_text = users_text.replace('*', '').replace('`', '').replace('\\', '')
+                    await query.message.reply_text(plain_text)
                 
     elif query.data == "admin_change_price":
         kb = InlineKeyboardMarkup([
