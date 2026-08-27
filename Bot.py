@@ -628,9 +628,8 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chunk = items[i:i + chunk_size]
                 users_text = f"👥 **لیست کاربران (بخش {i//chunk_size + 1}):**\n\n"
                 for uid, info in chunk:
-                    name = info.get('name', 'کاربر')
                     uname = info.get('username', 'بدون یوزرنیم')
-                    users_text += f"• **نام:** {name} | **یوزرنیم:** {uname} | **آیدی:** `{uid}`\n"
+                    users_text += f"• **یوزرنیم:** {uname} | **آیدی:** `{uid}`\n"
                 await query.message.reply_text(users_text, parse_mode='Markdown')
                 
     elif query.data == "admin_change_price":
