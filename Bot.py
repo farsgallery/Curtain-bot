@@ -3,6 +3,7 @@ import os
 import http.server
 import socketserver
 import threading
+import json
 import jdatetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import (
@@ -13,7 +14,29 @@ from telegram.ext import (
 # --- تنظیمات عمومی ---
 ADMIN_ID = 333050909
 CHANNEL_USERNAME = "@irandecoration_gallery"
-USER_LIST = {}  # {user_id: {"username": "@...", "name": "..."}}
+USERS_FILE = "users.json"
+
+# توابع مدیریت فایل برای ذخیره دائمی کاربران
+def load_users():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logging.error(f"Error loading users: {e}")
+            return {}
+    return {}
+
+def save_user(user_id: int, username: str):
+    users = load_users()
+    users[str(user_id)] = username
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Error saving user: {e}")
+
+USER_LIST = load_users()
 
 PRICES = {
     'پرده شید ساده': 1980000,
@@ -29,7 +52,6 @@ PRODUCT_LINKS = {
     'پرده کرکره فلزی': 'https://farsgallery.com/product-category/blind/venetian-blinds/'
 }
 
-# --- لیست کامل لینک نمونه‌کارها ---
 PORTFOLIO_IMAGES = {
     'پرده زبرا': [
         "https://t.me/irandecoration_gallery/1263", "https://t.me/irandecoration_gallery/1264",
@@ -174,7 +196,9 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
-    USER_LIST[user.id] = {"username": user_handle, "name": user.first_name or "کاربر"}
+    
+    # ذخیره‌سازی بلافاصله و دائمی کاربر در فایل JSON
+    save_user(user.id, user_handle)
 
     if not await is_user_member(user.id, context):
         await send_join_channel_message(update)
@@ -186,9 +210,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
+    user = query.from_user
+    user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
+    save_user(user.id, user_handle)
     
-    if await is_user_member(user_id, context):
+    if await is_user_member(user.id, context):
         await query.message.reply_text("✅ عضویت شما تأیید شد!", reply_markup=PERSISTENT_KEYBOARD)
         await send_welcome_message(update, context)
     else:
@@ -596,7 +622,7 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
 
     return ConversationHandler.END
 
-# --- پنل مدیریت کامل (اصلاح شده) ---
+# --- پنل مدیریت کامل (نمایش فقط یوزرنیم و آیدی) ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -614,21 +640,21 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != ADMIN_ID:
         return
 
+    users = load_users()
+
     if query.data == "admin_stats":
-        await query.message.reply_text(f"📊 **تعداد کل کاربران استارت زده:** {len(USER_LIST)} نفر", parse_mode='Markdown')
+        await query.message.reply_text(f"📊 **تعداد کل کاربران استارت زده:** {len(users)} نفر", parse_mode='Markdown')
         
     elif query.data == "admin_users":
-        if not USER_LIST:
+        if not users:
             await query.message.reply_text("👥 هیچ کاربر فعالی ثبت نشده است.")
         else:
-            # ارسال دسته‌ای کاربران برای جلوگیری از ارور محدودیت طول متن تلگرام
-            items = list(USER_LIST.items())
+            items = list(users.items())
             chunk_size = 20
             for i in range(0, len(items), chunk_size):
                 chunk = items[i:i + chunk_size]
                 users_text = f"👥 **لیست کاربران (بخش {i//chunk_size + 1}):**\n\n"
-                for uid, info in chunk:
-                    uname = info.get('username', 'بدون یوزرنیم')
+                for uid, uname in chunk:
                     users_text += f"• **یوزرنیم:** {uname} | **آیدی:** `{uid}`\n"
                 await query.message.reply_text(users_text, parse_mode='Markdown')
                 
@@ -659,7 +685,7 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
 
-# --- منو و نمایش نمونه‌کارها (اصلاح شده و قطعی) ---
+# --- منو و نمایش نمونه‌کارها ---
 
 async def show_portfolio_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_target = update.message or update.callback_query.message
@@ -681,9 +707,7 @@ async def send_portfolio_images(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     
-    # جداسازی پاکیزه اسم محصول بدون کاراکترهای اضافه
     p_name = query.data.replace("port_", "").strip()
-    
     imgs = PORTFOLIO_IMAGES.get(p_name, [])
     
     if not imgs:
