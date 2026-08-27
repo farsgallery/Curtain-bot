@@ -342,7 +342,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
-                when=60,
+                when=86400,
                 chat_id=update.effective_chat.id,
                 data={'curtain_type': curtain_type}
             )
