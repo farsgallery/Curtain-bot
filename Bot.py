@@ -8,7 +8,7 @@ import jdatetime
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler,
-    ContextTypes, filters, ConversationHandler
+    ContextTypes, filters, ConversationHandler, JobQueue
 )
 
 # --- تنظیمات عمومی ---
@@ -197,7 +197,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_handle = f"@{user.username}" if user.username else "بدون یوزرنیم"
     
-    # ذخیره‌سازی بلافاصله و دائمی کاربر در فایل JSON
     save_user(user.id, user_handle)
 
     if not await is_user_member(user.id, context):
@@ -339,6 +338,7 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(append_specific_footer(result_msg), reply_markup=inline_kb)
 
+        # تنظیم یادآوری ۲۴ ساعته (86400 ثانیه)
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -622,7 +622,7 @@ async def finalize_direct_order(update: Update, context: ContextTypes.DEFAULT_TY
 
     return ConversationHandler.END
 
-# --- پنل مدیریت کامل (نمایش فقط یوزرنیم و آیدی) ---
+# --- پنل مدیریت ---
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -655,7 +655,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chunk = items[i:i + chunk_size]
                 users_text = f"👥 **لیست کاربران (بخش {i//chunk_size + 1}):**\n\n"
                 for uid, uname in chunk:
-                    # اسکیپ کردن کاراکترهای خاص برای جلوگیری از خطای Markdown تلگرام
                     safe_uname = uname.replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
                     users_text += f"• **یوزرنیم:** {safe_uname} | **آیدی:** `{uid}`\n"
                 
@@ -663,7 +662,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await query.message.reply_text(users_text, parse_mode='Markdown')
                 except Exception as e:
                     logging.error(f"Error sending users list: {e}")
-                    # ارسال متن ساده در صورت بروز خطای قالب‌بندی
                     plain_text = users_text.replace('*', '').replace('`', '').replace('\\', '')
                     await query.message.reply_text(plain_text)
                 
@@ -859,7 +857,10 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def main():
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAEO3ZII40K1T_q8-kdUGUBKx-HJKbdmQBo")
-    app = ApplicationBuilder().token(TOKEN).build()
+    
+    # اضافه کردن JobQueue به ساختار اپلیکیشن جهت فعال‌سازی یادآوری‌ها
+    job_queue = JobQueue()
+    app = ApplicationBuilder().token(TOKEN).job_queue(job_queue).build()
 
     MENU_REGEX = '^(شروع 🏠|راهنمایی و پیشنهاد نوع پرده 💡|وب سایت خرید آنلاین 🌐|ساعات کاری 🕒|آدرس و شماره تماس 📍|نمونه کارها 🖼|ثبت سفارش و مشاوره مستقیم 📝|آموزش اندازه‌گیری 📐|هزینه نصب و ارسال 🚚)$'
 
