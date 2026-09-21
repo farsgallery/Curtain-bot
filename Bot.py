@@ -115,6 +115,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 GET_WIDTH, GET_HEIGHT = range(2)
 ORD_NAME, ORD_PHONE, ORD_TYPE, ORD_ADDRESS, ORD_OPTIONS, ORD_PHOTO, ORD_WIDTH, ORD_HEIGHT = range(2, 10)
 SET_PR_VAL = 10
+GET_BROADCAST_MSG = 11
 
 PERSISTENT_KEYBOARD = ReplyKeyboardMarkup([
     ['شروع 🏠'],
@@ -186,9 +187,9 @@ async def send_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYP
     welcome_msg = (
         "به ربات مجموعه هُنری فارس گالری خوش آمدید 🎨\n\n"
         "میتوانید برای استعلام قیمت بر اساس ابعاد و اندازه پرده مورد نظر خود و همچنین ثبت سفارش از این ربات به راحتی استفاده کنید.\n\n"
+        "👇 یکی از گزینه ها را انتخاب کنید:"
     )
     
-    # ارسال کیبورد اصلی ثابت جهت تثبیت دکمه‌های منو در تمامی پلتفرم‌ها (آیفون، اندروید و ویندوز)
     if update.message:
         await update.message.reply_text(welcome_msg, reply_markup=PERSISTENT_KEYBOARD)
         await update.message.reply_text("👇 یکی از گزینه ها را انتخاب کنید:", reply_markup=inline_kb)
@@ -341,7 +342,6 @@ async def get_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(append_specific_footer(result_msg), reply_markup=inline_kb)
 
-        # تنظیم یادآوری ۲۴ ساعته (86400 ثانیه)
         if context.job_queue:
             context.job_queue.run_once(
                 send_followup_message,
@@ -633,7 +633,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 آمار ربات", callback_data="admin_stats")],
         [InlineKeyboardButton("💵 تغییر قیمت محصولات", callback_data="admin_change_price")],
-        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم و آیدی)", callback_data="admin_users")]
+        [InlineKeyboardButton("👥 لیست کاربران (یوزرنیم و آیدی)", callback_data="admin_users")],
+        [InlineKeyboardButton("📢 ارسال پیام همگانی", callback_data="admin_broadcast")]
     ])
     await update.message.reply_text("⚙️ **پنل مدیریت فارس گالری:**", reply_markup=kb, parse_mode='Markdown')
 
@@ -694,6 +695,43 @@ async def save_new_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("⚠️ عدد وارد شده نامعتبر است.")
     return ConversationHandler.END
+
+# --- توابع مربوط به پیام همگانی ---
+async def ask_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.from_user.id != ADMIN_ID:
+        return ConversationHandler.END
+    await query.message.reply_text(
+        "📢 لطفاً پیام خود را (متن، عکس، ویدیو و...) جهت ارسال به تمامی کاربران بفرستید:\n\n"
+        "❌ در صورت انصراف، کلمه /cancel را ارسال کنید."
+    )
+    return GET_BROADCAST_MSG
+
+async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return ConversationHandler.END
+
+    users = load_users()
+    count = 0
+    message = update.message
+    
+    await update.message.reply_text("⏳ در حال ارسال پیام همگانی... لطفاً تا پایان ارسال صبر کنید.")
+    
+    for uid_str in users.keys():
+        try:
+            await message.copy(chat_id=int(uid_str))
+            count += 1
+        except Exception as e:
+            logging.error(f"Failed to send broadcast to {uid_str}: {e}")
+    
+    await update.message.reply_text(f"✅ پیام همگانی شما با موفقیت برای {count} نفر ارسال شد.")
+    return ConversationHandler.END
+
+async def cancel_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ عملیات ارسال پیام همگانی لغو شد.")
+    return ConversationHandler.END
+
 
 # --- منو و نمایش نمونه‌کارها ---
 
@@ -858,10 +896,65 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
         await calc_services(update, context)
     return ConversationHandler.END
 
+
+# --- پشتیبانی و ارسال پیام به کاربر و ادمین ---
+async def global_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    msg = update.message
+    if not msg:
+        return
+
+    # ۱. بخش مربوط به پاسخ دادن شما (ادمین) به پیام فروارد شده کاربران
+    if user.id == ADMIN_ID and msg.reply_to_message and msg.reply_to_message.text:
+        reply_to = msg.reply_to_message
+        if "پیام جدید از کاربر" in reply_to.text and "🆔 آیدی:" in reply_to.text:
+            try:
+                lines = reply_to.text.split('\n')
+                for line in lines:
+                    if line.startswith("🆔 آیدی:"):
+                        user_id = int(line.replace("🆔 آیدی:", "").strip().replace("`", ""))
+                        await msg.copy(chat_id=user_id)
+                        await msg.reply_text("✅ پاسخ شما با موفقیت به کاربر ارسال شد.")
+                        return
+            except Exception as e:
+                logging.error(f"Error in admin reply: {e}")
+                await msg.reply_text("❌ خطا در ارسال پاسخ به کاربر.")
+                return
+
+    # اگر پیام معمولی از طرف ادمین باشد (که نه کامند است نه ریپلای) نادیده گرفته می‌شود تا لوپ نشود
+    if user.id == ADMIN_ID:
+        return
+
+    # ۲. بخش دریافت پیام کاربران و ارسال به ادمین
+    MENU_ITEMS = [
+        'شروع 🏠', 'راهنمایی و پیشنهاد نوع پرده 💡', 'نمونه کارها 🖼',
+        'ثبت سفارش و مشاوره مستقیم 📝', 'آموزش اندازه‌گیری 📐',
+        'هزینه نصب و ارسال 🚚', 'وب سایت خرید آنلاین 🌐',
+        'ساعات کاری 🕒', 'آدرس و شماره تماس 📍'
+    ]
+    if msg.text and msg.text in MENU_ITEMS:
+        return
+        
+    username = f"@{user.username}" if user.username else "بدون یوزرنیم"
+    
+    try:
+        # فوروارد پیام کاربر به شما
+        fwd_msg = await msg.forward(chat_id=ADMIN_ID)
+        # پیام راهنما برای ریپلای زدن به شما
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"📨 **پیام جدید از کاربر (پشتیبانی)**\n👤 کاربر: {username}\n🆔 آیدی: `{user.id}`\n\n💡 جهت پاسخ دادن، دقیقاً روی همین پیام ریپلای (Reply) بزنید و جوابتان را بفرستید.",
+            reply_to_message_id=fwd_msg.message_id,
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logging.error(f"Error forwarding message to admin: {e}")
+
+# =================================================
+
 def main():
     TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGcbV8VAnjj6cfBn3lxofyCcvxcXhcdk6M")
     
-    # اضافه کردن JobQueue به ساختار اپلیکیشن جهت فعال‌سازی یادآوری‌ها
     job_queue = JobQueue()
     app = ApplicationBuilder().token(TOKEN).job_queue(job_queue).build()
 
@@ -906,14 +999,24 @@ def main():
         fallbacks=[MessageHandler(filters.Regex(MENU_REGEX), handle_menu_fallback)]
     )
 
+    broadcast_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(ask_broadcast_msg, pattern="^admin_broadcast$")],
+        states={
+            GET_BROADCAST_MSG: [MessageHandler(filters.ALL & ~filters.COMMAND, send_broadcast_msg)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel_broadcast)]
+    )
+
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('admin', admin_panel))
 
-    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
+    # دقت کنید که الگو برای جلوگیری از تداخل آپدیت شد
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_(stats|users|change_price)$"))
     
     app.add_handler(price_conv_handler)
     app.add_handler(direct_order_conv)
     app.add_handler(admin_conv)
+    app.add_handler(broadcast_conv)
     
     app.add_handler(MessageHandler(filters.Regex('^شروع 🏠$'), start_command))
     app.add_handler(MessageHandler(filters.Regex('^راهنمایی و پیشنهاد نوع پرده 💡$'), suggest_curtain))
@@ -934,6 +1037,9 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_mtype_selection, pattern="^mtype_"))
     app.add_handler(CallbackQueryHandler(handle_mpos_selection, pattern="^mpos_"))
     app.add_handler(CallbackQueryHandler(send_portfolio_images, pattern="^port_"))
+
+    # پشتیبانی: گرفتن پیام‌های متفرقه و هندل کردن ریپلای شما به کاربران (باید حتماً در آخر باشد)
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, global_message_handler))
 
     print("Bot is running...")
     app.run_polling(stop_signals=None)
