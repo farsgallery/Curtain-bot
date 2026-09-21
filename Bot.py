@@ -953,7 +953,7 @@ async def global_message_handler(update: Update, context: ContextTypes.DEFAULT_T
 # =================================================
 
 def main():
-    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGcbV8VAnjj6cfBn3lxofyCcvxcXhcdk6M")
+    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGok_qrkROH3EmU-Fy_1UWb-sFzhzumC9g")
     
     job_queue = JobQueue()
     app = ApplicationBuilder().token(TOKEN).job_queue(job_queue).build()
