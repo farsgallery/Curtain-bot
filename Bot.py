@@ -859,7 +859,7 @@ async def handle_menu_fallback(update: Update, context: ContextTypes.DEFAULT_TYP
     return ConversationHandler.END
 
 def main():
-    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAG1CtvS_LFbVlLk8CUJFx_KbmAOiOSpezE")
+    TOKEN = os.environ.get("BOT_TOKEN", "8737297309:AAGBLTei56n1yumVOabmoAFCjWEDg9D1bi8")
     
     # اضافه کردن JobQueue به ساختار اپلیکیشن جهت فعال‌سازی یادآوری‌ها
     job_queue = JobQueue()
